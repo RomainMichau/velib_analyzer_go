@@ -3,6 +3,7 @@ package clients
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Danny-Dasilva/CycleTLS/cycletls"
 	"github.com/RomainMichau/cloudscraper_go/cloudscraper"
 	"strconv"
 	"strings"
@@ -10,7 +11,9 @@ import (
 )
 
 type VelibApiClient struct {
-	client cloudscraper.CloudScrapper
+	client   cloudscraper.CloudScrapper
+	apiToken string
+	RespChan chan cycletls.Response
 }
 
 type stationsApiResponse struct {
@@ -41,33 +44,9 @@ type stationsApiResponse struct {
 	DensityLevel       int    `json:"densityLevel"`
 }
 
-type stationDetailApiResponse struct {
-	Station struct {
-		Gps struct {
-			Latitude  float64 `json:"latitude"`
-			Longitude float64 `json:"longitude"`
-		} `json:"gps"`
-		State   string `json:"state"`
-		Name    string `json:"name"`
-		Code    string `json:"code"`
-		Type    string `json:"type"`
-		DueDate int    `json:"dueDate"`
-	} `json:"station"`
-	NbBike             int    `json:"nbBike"`
-	NbEbike            int    `json:"nbEbike"`
-	NbFreeDock         int    `json:"nbFreeDock"`
-	NbFreeEDock        int    `json:"nbFreeEDock"`
-	CreditCard         string `json:"creditCard"`
-	NbDock             int    `json:"nbDock"`
-	NbEDock            int    `json:"nbEDock"`
-	NbBikeOverflow     int    `json:"nbBikeOverflow"`
-	NbEBikeOverflow    int    `json:"nbEBikeOverflow"`
-	KioskState         string `json:"kioskState"`
-	Overflow           string `json:"overflow"`
-	OverflowActivation string `json:"overflowActivation"`
-	MaxBikeOverflow    int    `json:"maxBikeOverflow"`
-	DensityLevel       int    `json:"densityLevel"`
-	Bikes              []struct {
+type StationDetailApiResponse struct {
+	stationsApiResponse
+	Bikes []struct {
 		DockPosition  string    `json:"dockPosition"`
 		BikeName      string    `json:"bikeName"`
 		BikeElectric  string    `json:"bikeElectric"`
@@ -83,12 +62,14 @@ type getStationBody struct {
 	Disponibility string `json:"disponibility"`
 }
 
-func InitVelibApi() VelibApiClient {
-	client, _ := cloudscraper.Init(false)
+func InitVelibApi(apiToken string) *VelibApiClient {
+	client, _ := cloudscraper.Init(false, true)
 	api := VelibApiClient{
-		client: *client,
+		client:   *client,
+		apiToken: apiToken,
+		RespChan: client.RespChan(),
 	}
-	return api
+	return &api
 }
 
 var (
@@ -97,31 +78,64 @@ var (
 	stationDetailsEndpoint = "/secured/searchStation?disponibility=yes"
 )
 
-func (api *VelibApiClient) GetVelibAtStations(stationName string) ([]stationDetailApiResponse, error) {
+func (api *VelibApiClient) GetVelibAtStations(stationName string) (StationDetailApiResponse, error) {
 	body := getStationBody{
 		StationName:   stationName,
 		Disponibility: "yes",
 	}
 	bodyJson, err := json.Marshal(body)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot parse body into JSON: %w", err)
+		return StationDetailApiResponse{}, fmt.Errorf("Cannot parse body into JSON: %w", err)
 	}
-	headers := map[string]string{"Authorization": "Basic bW9iYTokMnkkMTAkRXNJYUk2LkRsZTh1elJGLlZGTEVKdTJ5MDJkc2xILnY3cUVvUkJHZ041MHNldUZpUkU1Ny4",
+	headers := map[string]string{"Authorization": fmt.Sprintf("Basic %s", api.apiToken),
 		"Content-Type": "application/json"}
 	res, err := api.client.Post(baseUrl+stationDetailsEndpoint, headers, string(bodyJson))
 	if err != nil {
-		return nil, fmt.Errorf("cannot fetch Station details into JSON: %w", err)
+		return StationDetailApiResponse{}, fmt.Errorf("failed to send request to velib api. %w", err)
 	}
-	if res.Status != 200 {
-		return nil, fmt.Errorf("code unexpected response from Velib API %d when getting details about station: %s",
-			res.Status, res.Body)
+	return api.ParseGetStationDetailResponse(res)
+}
+
+func (api *VelibApiClient) QueueGetVelibRequest(stationName string) error {
+	body := getStationBody{
+		StationName:   stationName,
+		Disponibility: "yes",
 	}
-	var respJson []stationDetailApiResponse
-	err = json.Unmarshal([]byte(res.Body), &respJson)
+	bodyJson, err := json.Marshal(body)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("Cannot parse body into JSON: %w", err)
 	}
-	return respJson, nil
+	headers := map[string]string{"Authorization": fmt.Sprintf("Basic %s", api.apiToken),
+		"Content-Type": "application/json"}
+	options := cycletls.Options{
+		Body:    string(bodyJson),
+		Headers: headers,
+		Timeout: 1000,
+	}
+	api.client.Queue(baseUrl+stationDetailsEndpoint, options, "POST")
+	return nil
+}
+
+func (api *VelibApiClient) ParseGetStationDetailResponse(resp cycletls.Response) (StationDetailApiResponse, error) {
+	if resp.Status != 200 {
+		return StationDetailApiResponse{}, fmt.Errorf("code unexpected response from Velib API %d when getting details about station: %s",
+			resp.Status, resp.Body)
+	}
+	var respJson []StationDetailApiResponse
+	err := json.Unmarshal([]byte(resp.Body), &respJson)
+	if err != nil {
+		return StationDetailApiResponse{}, err
+	}
+	shorterStationNameSize := 10000
+	shorterStationID := 0
+	for i, station := range respJson {
+		sz := len(station.Station.Name)
+		if sz < shorterStationNameSize {
+			shorterStationID = i
+			shorterStationNameSize = sz
+		}
+	}
+	return respJson[shorterStationID], nil
 }
 
 func (api *VelibApiClient) GetAllStations() ([]VelibApiEntity, error) {
