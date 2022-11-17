@@ -4,21 +4,19 @@ import (
 	"flag"
 	"fmt"
 	"github.com/RomainMichau/velib_finder/clients"
-	"sync"
+	"time"
 )
 
 type Params struct {
-	DbHostname string
-	ApiToken   string
-	DbPassword string
-	DbUsername string
-	DbPort     int
-	DbName     string
-	LogLevel   string
+	DbHostname  string
+	ApiToken    string
+	DbPassword  string
+	DbUsername  string
+	DbPort      int
+	DbName      string
+	LogLevel    string
+	IntervalSec int
 }
-
-var blk = []string{}
-var mu sync.Mutex
 
 func main() {
 	params, err := parseParams()
@@ -28,7 +26,16 @@ func main() {
 	sql, _ := clients.InitSql(params.DbPassword, params.DbHostname, params.DbUsername, params.DbName, params.DbPort)
 	api := clients.InitVelibApi(params.ApiToken)
 	exporter := InitDbExporter(api, sql, 200, 10)
-	exporter.RunExport()
+	for {
+		fmt.Println("Running DB export")
+		err := exporter.RunExport()
+		if err != nil {
+			fmt.Println("Fail to run DB export: %w", err)
+		} else {
+			fmt.Println("DB export ran successfully")
+		}
+		time.Sleep(time.Duration(params.IntervalSec) * time.Second)
+	}
 }
 
 func parseParams() (*Params, error) {
@@ -38,6 +45,7 @@ func parseParams() (*Params, error) {
 	dbName := flag.String("db_name", "", "DB Name")
 	dbUserName := flag.String("db_user", "", "DB username")
 	dbPort := flag.Int("db_port", 5432, "DB username")
+	intervalSeconds := flag.Int("interval_sec", 600, "Run interval in seconds")
 	logLevel := flag.String("log", "INFO", "Log level")
 	flag.Parse()
 	if *logLevel == "" {
@@ -52,6 +60,9 @@ func parseParams() (*Params, error) {
 	if *dbPort == 0 {
 		return nil, fmt.Errorf("db_port param required")
 	}
+	if *intervalSeconds == 0 {
+		return nil, fmt.Errorf("interval_sec param required")
+	}
 	if *dbPassword == "" {
 		return nil, fmt.Errorf("db_password param required")
 	}
@@ -62,12 +73,13 @@ func parseParams() (*Params, error) {
 		return nil, fmt.Errorf("db_name param required")
 	}
 	return &Params{
-		DbHostname: *dbHostname,
-		ApiToken:   *velibApiToken,
-		DbPassword: *dbPassword,
-		DbUsername: *dbUserName,
-		DbPort:     *dbPort,
-		DbName:     *dbName,
-		LogLevel:   *logLevel,
+		DbHostname:  *dbHostname,
+		ApiToken:    *velibApiToken,
+		DbPassword:  *dbPassword,
+		DbUsername:  *dbUserName,
+		DbPort:      *dbPort,
+		DbName:      *dbName,
+		LogLevel:    *logLevel,
+		IntervalSec: *intervalSeconds,
 	}, nil
 }

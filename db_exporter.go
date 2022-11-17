@@ -13,6 +13,7 @@ type DbExporter struct {
 	sql                 *clients.VelibSqlClient
 	ticker              <-chan time.Time
 	i                   int
+	runId               int
 	mutex               sync.Mutex
 	wg                  sync.WaitGroup
 	lastStationForVelib map[int]int
@@ -50,9 +51,9 @@ func (exp *DbExporter) worker() {
 		if stationSql == nil {
 			log.Println("Inserting station ", stationDetail.Station.Name)
 			err := exp.sql.InsertStation(stationDetail.Station.Name, stationDetail.Station.Gps.Longitude,
-				stationDetail.Station.Gps.Latitude, stationCode, 1)
+				stationDetail.Station.Gps.Latitude, stationCode, exp.runId)
 			if err != nil {
-				return
+				print(err)
 			}
 		}
 		for _, bike := range stationDetail.Bikes {
@@ -62,7 +63,7 @@ func (exp *DbExporter) worker() {
 				panic(err)
 			}
 			if sqlBike == nil {
-				err := exp.sql.InsertVelib(velibCode, 1, bike.BikeElectric == "yes")
+				err := exp.sql.InsertVelib(velibCode, exp.runId, bike.BikeElectric == "yes")
 				if err != nil {
 					return
 				}
@@ -71,7 +72,7 @@ func (exp *DbExporter) worker() {
 				last_station, present := exp.lastStationForVelib[velibCode]
 				if !present || last_station != stationCode {
 					log.Println("Inserting velib docked", velibCode, stationCode)
-					err := exp.sql.InsertVelibDocked(velibCode, stationCode, 1, now, bike.BikeStatus == "disponible")
+					err := exp.sql.InsertVelibDocked(velibCode, stationCode, exp.runId, now, bike.BikeStatus == "disponible")
 					if err != nil {
 						panic(err)
 					}
@@ -85,7 +86,15 @@ func (exp *DbExporter) worker() {
 
 func (exp *DbExporter) RunExport() error {
 	start := time.Now()
+	runId, err := exp.sql.InsertRun(time.Now())
+	exp.runId = runId
+	if err != nil {
+		return err
+	}
 	allStations, err := exp.api.GetAllStations()
+	if err != nil {
+		return err
+	}
 	exp.lastStationForVelib, err = exp.sql.GetLastStationForAllVelib()
 	if err != nil {
 		return err

@@ -11,7 +11,7 @@ import (
 )
 
 type VelibApiClient struct {
-	client   cloudscraper.CloudScrapper
+	channel  cloudscraper.CloudScrapper
 	apiToken string
 	RespChan chan cycletls.Response
 }
@@ -63,11 +63,11 @@ type getStationBody struct {
 }
 
 func InitVelibApi(apiToken string) *VelibApiClient {
-	client, _ := cloudscraper.Init(false, true)
+	channel, _ := cloudscraper.Init(false, true)
 	api := VelibApiClient{
-		client:   *client,
+		channel:  *channel,
 		apiToken: apiToken,
-		RespChan: client.RespChan(),
+		RespChan: channel.RespChan(),
 	}
 	return &api
 }
@@ -89,7 +89,7 @@ func (api *VelibApiClient) GetVelibAtStations(stationName string) (StationDetail
 	}
 	headers := map[string]string{"Authorization": fmt.Sprintf("Basic %s", api.apiToken),
 		"Content-Type": "application/json"}
-	res, err := api.client.Post(baseUrl+stationDetailsEndpoint, headers, string(bodyJson))
+	res, err := api.channel.Post(baseUrl+stationDetailsEndpoint, headers, string(bodyJson))
 	if err != nil {
 		return StationDetailApiResponse{}, fmt.Errorf("failed to send request to velib api. %w", err)
 	}
@@ -112,7 +112,7 @@ func (api *VelibApiClient) QueueGetVelibRequest(stationName string) error {
 		Headers: headers,
 		Timeout: 1000,
 	}
-	api.client.Queue(baseUrl+stationDetailsEndpoint, options, "POST")
+	api.channel.Queue(baseUrl+stationDetailsEndpoint, options, "POST")
 	return nil
 }
 
@@ -140,21 +140,21 @@ func (api *VelibApiClient) ParseGetStationDetailResponse(resp cycletls.Response)
 
 func (api *VelibApiClient) GetAllStations() ([]VelibApiEntity, error) {
 	headers := map[string]string{"Authorization": "Basic bW9iYTokMnkkMTAkRXNJYUk2LkRsZTh1elJGLlZGTEVKdTJ5MDJkc2xILnY3cUVvUkJHZ041MHNldUZpUkU1Ny4"}
-	res, err := api.client.Get(baseUrl+allStationsEndpoint, headers, "")
+	res, err := api.channel.Get(baseUrl+allStationsEndpoint, headers, "")
 	if err != nil {
 		return nil, err
 	}
 	var respJson []stationsApiResponse
 	err = json.Unmarshal([]byte(res.Body), &respJson)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to jsonify %s: %w", res.Body, err)
 	}
 	var cleanedStation []VelibApiEntity
 	for _, v := range respJson {
 		if !strings.Contains(v.Station.Code, "_relais") {
 			code, err := strconv.Atoi(v.Station.Code)
 			if err != nil {
-				return nil, fmt.Errorf("Cannot casr code to int: %w", err)
+				return nil, fmt.Errorf("Cannot cast code to int: %w", err)
 			}
 			cleanedStation = append(cleanedStation, VelibApiEntity{
 				Code:      code,
@@ -163,6 +163,9 @@ func (api *VelibApiClient) GetAllStations() ([]VelibApiEntity, error) {
 				Name:      v.Station.Name,
 			})
 		}
+	}
+	if cleanedStation == nil {
+		print("blk")
 	}
 	return cleanedStation, nil
 }
