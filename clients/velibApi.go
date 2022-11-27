@@ -151,18 +151,17 @@ func (api *VelibApiClient) GetAllStations() ([]VelibApiEntity, error) {
 	}
 	var cleanedStation []VelibApiEntity
 	for _, v := range respJson {
-		if !strings.Contains(v.Station.Code, "_relais") {
-			code, err := strconv.Atoi(v.Station.Code)
-			if err != nil {
-				return nil, fmt.Errorf("Cannot cast code to int: %w", err)
-			}
-			cleanedStation = append(cleanedStation, VelibApiEntity{
-				Code:      code,
-				Latitude:  v.Station.Gps.Latitude,
-				Longitude: v.Station.Gps.Longitude,
-				Name:      v.Station.Name,
-			})
+		stationCode := strings.ReplaceAll(v.Station.Code, "_relais", "")
+		code, err := strconv.Atoi(stationCode)
+		if err != nil {
+			return nil, fmt.Errorf("Cannot cast code to int: %w", err)
 		}
+		cleanedStation = append(cleanedStation, VelibApiEntity{
+			Code:      code,
+			Latitude:  v.Station.Gps.Latitude,
+			Longitude: v.Station.Gps.Longitude,
+			Name:      v.Station.Name,
+		})
 	}
 	if cleanedStation == nil {
 		return nil, fmt.Errorf("velib API returned an empty list of station. Body: %s", res.Body)
