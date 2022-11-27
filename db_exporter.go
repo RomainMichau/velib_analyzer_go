@@ -74,17 +74,17 @@ func (exp *DbExporter) worker() {
 				}
 				exp.insertVelibCount++
 				log.Debugf("Inserting velib %d", velibCode)
-				exp.i++
-				lastStation, present := exp.lastStationForVelib[velibCode]
-				if !present || lastStation != stationCode {
-					log.Debug("Inserting velib docked", velibCode, stationCode)
-					err := exp.sql.InsertVelibDocked(velibCode, stationCode, exp.runId, now, bike.BikeStatus == "disponible")
-					if err != nil {
-						log.Errorf("Failed to insert velib docked %d in SQL: %s", velibCode, err.Error())
-						return
-					}
-					exp.insertVelibDockedCount++
+			}
+			exp.i++
+			lastStation, present := exp.lastStationForVelib[velibCode]
+			if !present || lastStation != stationCode {
+				log.Debug("Inserting velib docked", velibCode, stationCode)
+				err := exp.sql.InsertVelibDocked(velibCode, stationCode, exp.runId, now, bike.BikeStatus == "disponible")
+				if err != nil {
+					log.Errorf("Failed to insert velib docked %d in SQL: %s", velibCode, err.Error())
+					return
 				}
+				exp.insertVelibDockedCount++
 			}
 		}
 		exp.wg.Done()
