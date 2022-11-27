@@ -9,14 +9,17 @@ import (
 )
 
 type DbExporter struct {
-	api                 *clients.VelibApiClient
-	sql                 *clients.VelibSqlClient
-	ticker              <-chan time.Time
-	i                   int
-	runId               int
-	mutex               sync.Mutex
-	wg                  sync.WaitGroup
-	lastStationForVelib map[int]int
+	api                    *clients.VelibApiClient
+	sql                    *clients.VelibSqlClient
+	ticker                 <-chan time.Time
+	i                      int
+	insertStationCount     int
+	insertVelibCount       int
+	insertVelibDockedCount int
+	runId                  int
+	mutex                  sync.Mutex
+	wg                     sync.WaitGroup
+	lastStationForVelib    map[int]int
 }
 
 func InitDbExporter(api *clients.VelibApiClient, sql *clients.VelibSqlClient, workerNb int,
@@ -53,8 +56,9 @@ func (exp *DbExporter) worker() {
 			err := exp.sql.InsertStation(stationDetail.Station.Name, stationDetail.Station.Gps.Longitude,
 				stationDetail.Station.Gps.Latitude, stationCode, exp.runId)
 			if err != nil {
-				log.Errorf("Failed to insert station %s. %s", stationDetail.Station.Name, err)
+				log.Errorf("Failed to insert station %s. %s", stationDetail.Station.Name, err.Error())
 			}
+			exp.insertStationCount++
 		}
 		for _, bike := range stationDetail.Bikes {
 			velibCode, _ := strconv.Atoi(bike.BikeName)
@@ -65,17 +69,21 @@ func (exp *DbExporter) worker() {
 			if sqlBike == nil {
 				err := exp.sql.InsertVelib(velibCode, exp.runId, bike.BikeElectric == "yes")
 				if err != nil {
+					log.Errorf("Failed to insert velib %d in SQL: %s", velibCode, err.Error())
 					return
 				}
+				exp.insertVelibCount++
 				log.Debugf("Inserting velib %d", velibCode)
 				exp.i++
-				last_station, present := exp.lastStationForVelib[velibCode]
-				if !present || last_station != stationCode {
+				lastStation, present := exp.lastStationForVelib[velibCode]
+				if !present || lastStation != stationCode {
 					log.Debug("Inserting velib docked", velibCode, stationCode)
 					err := exp.sql.InsertVelibDocked(velibCode, stationCode, exp.runId, now, bike.BikeStatus == "disponible")
 					if err != nil {
-						panic(err)
+						log.Errorf("Failed to insert velib docked %d in SQL: %s", velibCode, err.Error())
+						return
 					}
+					exp.insertVelibDockedCount++
 				}
 			}
 		}
@@ -85,6 +93,9 @@ func (exp *DbExporter) worker() {
 }
 
 func (exp *DbExporter) RunExport() error {
+	exp.insertVelibDockedCount = 0
+	exp.insertVelibCount = 0
+	exp.insertStationCount = 0
 	start := time.Now()
 	runId, err := exp.sql.InsertRun(time.Now())
 	exp.runId = runId
@@ -109,6 +120,7 @@ func (exp *DbExporter) RunExport() error {
 	}
 	elapsed := time.Since(start)
 	exp.wg.Wait()
-	log.Infof("Run time took %s\n", elapsed)
+	log.Infof("Run time took %s\n. Inserted Station: %d, Inserted Velib: %d, Insert Docked Velib: %d", elapsed,
+		exp.insertStationCount, exp.insertVelibCount, exp.insertVelibDockedCount)
 	return nil
 }
