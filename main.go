@@ -4,22 +4,46 @@ import (
 	"flag"
 	"fmt"
 	"github.com/RomainMichau/velib_finder/clients"
+	"io"
+	"net/http"
 	"time"
 )
 
 type Params struct {
-	DbHostname  string
-	ApiToken    string
-	DbPassword  string
-	DbUsername  string
-	DbPort      int
-	DbName      string
-	LogLevel    string
-	IntervalSec int
+	DbHostname   string
+	ApiToken     string
+	DbPassword   string
+	DbUsername   string
+	DbPort       int
+	DbName       string
+	LogLevel     string
+	IntervalSec  int
+	displayPubIp bool
+}
+
+func getMyPublicIp() (string, error) {
+	resp, err := http.Get("https://ifconfig.me/")
+	if err != nil {
+		return "", fmt.Errorf("Failed to query ifconfig.me: %w", err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("Failed to read ifconfig.me response: %w", err)
+	}
+	return string(body), nil
 }
 
 func main() {
 	params, err := parseParams()
+	if params.displayPubIp {
+		ip, err := getMyPublicIp()
+		if err != nil {
+			panic(err)
+		} else {
+			fmt.Printf("Public IP: %s\n", ip)
+		}
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -47,6 +71,7 @@ func parseParams() (*Params, error) {
 	dbPort := flag.Int("db_port", 5432, "DB username")
 	intervalSeconds := flag.Int("interval_sec", 600, "Run interval in seconds")
 	logLevel := flag.String("log", "INFO", "Log level")
+	displayPubIp := flag.Bool("show_ip", false, "Log level")
 	flag.Parse()
 	if *logLevel == "" {
 		return nil, fmt.Errorf("log param required")
@@ -73,13 +98,14 @@ func parseParams() (*Params, error) {
 		return nil, fmt.Errorf("db_name param required")
 	}
 	return &Params{
-		DbHostname:  *dbHostname,
-		ApiToken:    *velibApiToken,
-		DbPassword:  *dbPassword,
-		DbUsername:  *dbUserName,
-		DbPort:      *dbPort,
-		DbName:      *dbName,
-		LogLevel:    *logLevel,
-		IntervalSec: *intervalSeconds,
+		DbHostname:   *dbHostname,
+		ApiToken:     *velibApiToken,
+		DbPassword:   *dbPassword,
+		DbUsername:   *dbUserName,
+		DbPort:       *dbPort,
+		DbName:       *dbName,
+		LogLevel:     *logLevel,
+		IntervalSec:  *intervalSeconds,
+		displayPubIp: *displayPubIp,
 	}, nil
 }
