@@ -99,10 +99,10 @@ func (exp *DbExporter) RunExport() error {
 	if err != nil {
 		return err
 	}
-	for _, v := range allStations {
+	for _, station := range allStations {
 		exp.wg.Add(1)
 
-		err := exp.api.QueueGetVelibRequest(v.Name)
+		err := exp.api.QueueGetVelibRequest(station.Name)
 		if err != nil {
 			return err
 		}

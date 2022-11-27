@@ -8,14 +8,18 @@ import (
 )
 
 type Params struct {
-	DbHostname  string
-	ApiToken    string
-	DbPassword  string
-	DbUsername  string
-	DbPort      int
-	DbName      string
-	LogLevel    string
-	IntervalSec int
+	DbHostname    string
+	ApiToken      string
+	DbPassword    string
+	DbUsername    string
+	DbPort        int
+	DbName        string
+	LogLevel      string
+	IntervalSec   int
+	UseProxy      bool
+	ProxyPassword string
+	ProxyLogin    string
+	ProxyCountry  string
 }
 
 func main() {
@@ -24,13 +28,19 @@ func main() {
 		panic(err)
 	}
 	sql, _ := clients.InitSql(params.DbPassword, params.DbHostname, params.DbUsername, params.DbName, params.DbPort)
-	api := clients.InitVelibApi(params.ApiToken)
+	var api *clients.VelibApiClient
+	if params.UseProxy {
+		api = clients.InitVelibApiUsingNordVpnProxy(params.ApiToken, params.ProxyLogin,
+			params.ProxyPassword, params.ProxyCountry)
+	} else {
+		api = clients.InitVelibApi(params.ApiToken)
+	}
 	exporter := InitDbExporter(api, sql, 200, 10)
 	for {
 		fmt.Println("Running DB export")
 		err := exporter.RunExport()
 		if err != nil {
-			fmt.Println("Fail to run DB export: %w", err)
+			fmt.Println("Fail to run DB export:", err)
 		} else {
 			fmt.Println("DB export ran successfully")
 		}
@@ -47,6 +57,10 @@ func parseParams() (*Params, error) {
 	dbPort := flag.Int("db_port", 5432, "DB username")
 	intervalSeconds := flag.Int("interval_sec", 600, "Run interval in seconds")
 	logLevel := flag.String("log", "INFO", "Log level")
+	useProxy := flag.Bool("proxify", false, "Use NordVpn Proxy")
+	proxyPassword := flag.String("proxy_password", "", "Proxy password")
+	proxyLogin := flag.String("proxy_login", "", "Proxy login")
+	proxyCountry := flag.String("proxy_country", "Belgium", "Proxy country")
 	flag.Parse()
 	if *logLevel == "" {
 		return nil, fmt.Errorf("log param required")
@@ -72,14 +86,21 @@ func parseParams() (*Params, error) {
 	if *dbName == "" {
 		return nil, fmt.Errorf("db_name param required")
 	}
+	if *useProxy && (*proxyPassword == "" || *proxyLogin == "") {
+		return nil, fmt.Errorf("proxy_password and proxy_login param required to use proxy")
+	}
 	return &Params{
-		DbHostname:  *dbHostname,
-		ApiToken:    *velibApiToken,
-		DbPassword:  *dbPassword,
-		DbUsername:  *dbUserName,
-		DbPort:      *dbPort,
-		DbName:      *dbName,
-		LogLevel:    *logLevel,
-		IntervalSec: *intervalSeconds,
+		DbHostname:    *dbHostname,
+		ApiToken:      *velibApiToken,
+		DbPassword:    *dbPassword,
+		DbUsername:    *dbUserName,
+		DbPort:        *dbPort,
+		DbName:        *dbName,
+		LogLevel:      *logLevel,
+		IntervalSec:   *intervalSeconds,
+		UseProxy:      *useProxy,
+		ProxyPassword: *proxyPassword,
+		ProxyLogin:    *proxyLogin,
+		ProxyCountry:  *proxyCountry,
 	}, nil
 }

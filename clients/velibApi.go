@@ -4,16 +4,30 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Danny-Dasilva/CycleTLS/cycletls"
+	"github.com/RomainMichau/NordVpn_Server_Picker/srvpicker"
 	"github.com/RomainMichau/cloudscraper_go/cloudscraper"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
 )
 
+const (
+	nordVpnHttpsProxyPort  = 89
+	baseUrl                = "https://www.velib-metropole.fr/api"
+	allStationsEndpoint    = "/map/details?zoomLevel=1&gpsTopLatitude=49.05546&gpsTopLongitude=2.662193&gpsBotLongitude=1.898879&gpsBotLatitude=48.572554&nbStations=0&bikes=yes"
+	stationDetailsEndpoint = "/secured/searchStation?disponibility=yes"
+)
+
 type VelibApiClient struct {
-	channel  cloudscraper.CloudScrapper
-	apiToken string
-	RespChan chan cycletls.Response
+	channel          cloudscraper.CloudScrapper
+	apiToken         string
+	RespChan         chan cycletls.Response
+	nordVpnSrvPicker *srvpicker.SrvPicker
+	useProxy         bool
+	proxyUsername    string
+	proxyPassword    string
+	proxyUrl         string
 }
 
 type stationsApiResponse struct {
@@ -68,32 +82,49 @@ func InitVelibApi(apiToken string) *VelibApiClient {
 		channel:  *channel,
 		apiToken: apiToken,
 		RespChan: channel.RespChan(),
+		useProxy: false,
+	}
+	return &api
+}
+func InitVelibApiUsingNordVpnProxy(apiToken string, proxyUsername string, proxyPassword string,
+	proxyCountry string) *VelibApiClient {
+	nordPickerOptions := srvpicker.Options{
+		Country: proxyCountry,
+		Feature: "proxy_ssl",
+	}
+	nordServerPicker := srvpicker.Init(&nordPickerOptions)
+	channel, _ := cloudscraper.Init(false, true)
+	api := VelibApiClient{
+		channel:          *channel,
+		apiToken:         apiToken,
+		RespChan:         channel.RespChan(),
+		nordVpnSrvPicker: nordServerPicker,
+		useProxy:         true,
+		proxyUsername:    proxyUsername,
+		proxyPassword:    proxyPassword,
 	}
 	return &api
 }
 
-var (
-	baseUrl                = "https://www.velib-metropole.fr/api"
-	allStationsEndpoint    = "/map/details?zoomLevel=1&gpsTopLatitude=49.05546&gpsTopLongitude=2.662193&gpsBotLongitude=1.898879&gpsBotLatitude=48.572554&nbStations=0&bikes=yes"
-	stationDetailsEndpoint = "/secured/searchStation?disponibility=yes"
-)
-
-func (api *VelibApiClient) GetVelibAtStations(stationName string) (StationDetailApiResponse, error) {
-	body := getStationBody{
-		StationName:   stationName,
-		Disponibility: "yes",
+func (api *VelibApiClient) getProxyUrl() (string, error) {
+	rand.Seed(time.Now().UnixNano())
+	if !api.useProxy {
+		return "", nil
 	}
-	bodyJson, err := json.Marshal(body)
-	if err != nil {
-		return StationDetailApiResponse{}, fmt.Errorf("Cannot parse body into JSON: %w", err)
+	if api.proxyUrl == "" {
+		proxyServers, err := api.nordVpnSrvPicker.GetServers()
+		if err != nil {
+			return "", fmt.Errorf("failed to get a NordVpn proxy server: %w", err)
+		}
+		if len(proxyServers) == 0 {
+			return "", fmt.Errorf("no NordVpn proxy server returned with param")
+		}
+		rnd := rand.Intn(len(proxyServers))
+		proxyServerDomain := proxyServers[rnd].Domain
+		fmt.Printf("Will use proxy %s\n", proxyServerDomain)
+		api.proxyUrl = fmt.Sprintf("https://%s:%s@%s:%d", api.proxyUsername, api.proxyPassword, proxyServerDomain, nordVpnHttpsProxyPort)
 	}
-	headers := map[string]string{"Authorization": fmt.Sprintf("Basic %s", api.apiToken),
-		"Content-Type": "application/json"}
-	res, err := api.channel.Post(baseUrl+stationDetailsEndpoint, headers, string(bodyJson))
-	if err != nil {
-		return StationDetailApiResponse{}, fmt.Errorf("failed to send request to velib api. %w", err)
-	}
-	return api.ParseGetStationDetailResponse(res)
+	return api.proxyUrl, nil
 }
 
 func (api *VelibApiClient) QueueGetVelibRequest(stationName string) error {
@@ -107,10 +138,15 @@ func (api *VelibApiClient) QueueGetVelibRequest(stationName string) error {
 	}
 	headers := map[string]string{"Authorization": fmt.Sprintf("Basic %s", api.apiToken),
 		"Content-Type": "application/json"}
+	proxyUrl, err := api.getProxyUrl()
+	if err != nil {
+		return err
+	}
 	options := cycletls.Options{
 		Body:    string(bodyJson),
 		Headers: headers,
 		Timeout: 1000,
+		Proxy:   proxyUrl,
 	}
 	api.channel.Queue(baseUrl+stationDetailsEndpoint, options, "POST")
 	return nil
@@ -118,6 +154,9 @@ func (api *VelibApiClient) QueueGetVelibRequest(stationName string) error {
 
 func (api *VelibApiClient) ParseGetStationDetailResponse(resp cycletls.Response) (StationDetailApiResponse, error) {
 	if resp.Status != 200 {
+		if strings.Contains(strings.ToLower(resp.Body), "proxy") {
+			fmt.Println("Proxy error. Changing proxy address")
+		}
 		return StationDetailApiResponse{}, fmt.Errorf("code unexpected response from Velib API %d when getting details about station: %s",
 			resp.Status, resp.Body)
 	}
@@ -138,25 +177,40 @@ func (api *VelibApiClient) ParseGetStationDetailResponse(resp cycletls.Response)
 	return respJson[shorterStationID], nil
 }
 
-func (api *VelibApiClient) GetAllStations() ([]VelibApiEntity, error) {
-	headers := map[string]string{"Authorization": "Basic bW9iYTokMnkkMTAkRXNJYUk2LkRsZTh1elJGLlZGTEVKdTJ5MDJkc2xILnY3cUVvUkJHZ041MHNldUZpUkU1Ny4"}
-	res, err := api.channel.Get(baseUrl+allStationsEndpoint, headers, "")
+func (api *VelibApiClient) GetAllStations() ([]StationApiEntity, error) {
+	headers := map[string]string{"Authorization": fmt.Sprintf("Basic %s", api.apiToken)}
+	proxyUrl, err := api.getProxyUrl()
 	if err != nil {
 		return nil, err
+	}
+	options := cycletls.Options{
+		Headers: headers,
+		Proxy:   proxyUrl,
+	}
+	res, err := api.channel.Do(baseUrl+allStationsEndpoint, options, "GET")
+	if err != nil {
+		api.proxyUrl = ""
+		return nil, err
+	}
+	if res.Status != 200 {
+		if strings.Contains(strings.ToLower(res.Body), "proxy") {
+			fmt.Println("Proxy error. Changing proxy address")
+		}
+		return nil, fmt.Errorf("unexpected response code %d. Body: %s", res.Status, res.Body)
 	}
 	var respJson []stationsApiResponse
 	err = json.Unmarshal([]byte(res.Body), &respJson)
 	if err != nil {
 		return nil, fmt.Errorf("failed to jsonify %s: %w", res.Body, err)
 	}
-	var cleanedStation []VelibApiEntity
+	var cleanedStation []StationApiEntity
 	for _, v := range respJson {
 		if !strings.Contains(v.Station.Code, "_relais") {
 			code, err := strconv.Atoi(v.Station.Code)
 			if err != nil {
 				return nil, fmt.Errorf("Cannot cast code to int: %w", err)
 			}
-			cleanedStation = append(cleanedStation, VelibApiEntity{
+			cleanedStation = append(cleanedStation, StationApiEntity{
 				Code:      code,
 				Latitude:  v.Station.Gps.Latitude,
 				Longitude: v.Station.Gps.Longitude,

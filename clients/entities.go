@@ -2,7 +2,7 @@ package clients
 
 import "time"
 
-type VelibApiEntity struct {
+type StationApiEntity struct {
 	Name      string
 	Longitude float32
 	Latitude  float32

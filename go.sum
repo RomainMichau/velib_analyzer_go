@@ -8,6 +8,8 @@ github.com/Danny-Dasilva/utls v0.0.0-20220418175931-f38e470e04f2/go.mod h1:A2g8g
 github.com/Danny-Dasilva/utls v0.0.0-20220604023528-30cb107b834e h1:tqiguW0yAcIwQBQtD+d2rjBnboqB7CwG1OZ12F8avX8=
 github.com/Danny-Dasilva/utls v0.0.0-20220604023528-30cb107b834e/go.mod h1:ssfbVNUfWJVRfW41RTpedOUlGXSq3J6aLmirUVkDgJk=
 github.com/PuerkitoBio/goquery v1.8.0/go.mod h1:ypIiRMtY7COPGk+I/YbZLbxsxn9g5ejnI2HSMtkjZvI=
+github.com/RomainMichau/NordVpn_Server_Picker v0.1.4 h1:XTasphGUl+sJxWrqMRKzJg2bx9oKb1xBdEv+RZSz3pE=
+github.com/RomainMichau/NordVpn_Server_Picker v0.1.4/go.mod h1:sL0W1o8NmPrHpnLQWvoD21ZgPvc9Pm9KdWoy1Y3RYjQ=
 github.com/RomainMichau/cloudscraper_go v0.4.1 h1:np8XbbkXXTPK+KOqtO49FYiAD34bYCL2Ndi3Sefw40M=
 github.com/RomainMichau/cloudscraper_go v0.4.1/go.mod h1:j+U5wG7A4FASVo0vroqf3td+9k0+RbLRH62IlYxg7Ao=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
