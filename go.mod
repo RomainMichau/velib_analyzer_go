@@ -6,6 +6,7 @@ require (
 	github.com/Danny-Dasilva/CycleTLS/cycletls v0.0.0-20220620102923-c84d740b4757
 	github.com/RomainMichau/cloudscraper_go v0.4.1
 	github.com/jackc/pgx/v5 v5.0.4
+	github.com/sirupsen/logrus v1.9.0
 )
 
 require (

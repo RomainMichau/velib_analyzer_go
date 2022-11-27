@@ -165,7 +165,7 @@ func (api *VelibApiClient) GetAllStations() ([]VelibApiEntity, error) {
 		}
 	}
 	if cleanedStation == nil {
-		print("blk")
+		return nil, fmt.Errorf("velib API returned an empty list of station. Body: %s", res.Body)
 	}
 	return cleanedStation, nil
 }

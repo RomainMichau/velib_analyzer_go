@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/RomainMichau/velib_finder/clients"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"strconv"
 	"sync"
 	"time"
@@ -49,11 +49,11 @@ func (exp *DbExporter) worker() {
 			panic(err)
 		}
 		if stationSql == nil {
-			log.Println("Inserting station ", stationDetail.Station.Name)
+			log.Debugf("Inserting station %s", stationDetail.Station.Name)
 			err := exp.sql.InsertStation(stationDetail.Station.Name, stationDetail.Station.Gps.Longitude,
 				stationDetail.Station.Gps.Latitude, stationCode, exp.runId)
 			if err != nil {
-				print(err)
+				log.Errorf("Failed to insert station %s. %s", stationDetail.Station.Name, err)
 			}
 		}
 		for _, bike := range stationDetail.Bikes {
@@ -67,11 +67,11 @@ func (exp *DbExporter) worker() {
 				if err != nil {
 					return
 				}
-				log.Println("Inserting velib ", velibCode, exp.i)
+				log.Debugf("Inserting velib %d", velibCode)
 				exp.i++
 				last_station, present := exp.lastStationForVelib[velibCode]
 				if !present || last_station != stationCode {
-					log.Println("Inserting velib docked", velibCode, stationCode)
+					log.Debug("Inserting velib docked", velibCode, stationCode)
 					err := exp.sql.InsertVelibDocked(velibCode, stationCode, exp.runId, now, bike.BikeStatus == "disponible")
 					if err != nil {
 						panic(err)
@@ -109,6 +109,6 @@ func (exp *DbExporter) RunExport() error {
 	}
 	elapsed := time.Since(start)
 	exp.wg.Wait()
-	log.Printf("Run time took %s\n", elapsed)
+	log.Infof("Run time took %s\n", elapsed)
 	return nil
 }
