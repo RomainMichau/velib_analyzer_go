@@ -102,11 +102,15 @@ func (exp *DbExporter) RunExport() error {
 	if err != nil {
 		return err
 	}
+
 	allStations, err := exp.api.GetAllStations()
 	if err != nil {
 		return err
 	}
+	startLastSt := time.Now()
 	exp.lastStationForVelib, err = exp.sql.GetLastStationForAllVelib()
+	elapsedLastSt := time.Since(startLastSt)
+	log.Infof("Took %s to get List of Last Station for All velib\n. ", elapsedLastSt)
 	if err != nil {
 		return err
 	}
