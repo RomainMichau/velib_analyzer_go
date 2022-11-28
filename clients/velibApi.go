@@ -1,14 +1,16 @@
 package clients
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/Danny-Dasilva/CycleTLS/cycletls"
 	"github.com/RomainMichau/cloudscraper_go/cloudscraper"
+	jsoniter "github.com/json-iterator/go"
 	"strconv"
 	"strings"
 	"time"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type VelibApiClient struct {
 	channel  cloudscraper.CloudScrapper
