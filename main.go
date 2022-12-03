@@ -11,15 +11,16 @@ import (
 )
 
 type Params struct {
-	DbHostname   string
-	ApiToken     string
-	DbPassword   string
-	DbUsername   string
-	DbPort       int
-	DbName       string
-	IntervalSec  int
-	displayPubIp bool
-	Verbose      bool
+	DbHostname       string
+	ApiToken         string
+	DbPassword       string
+	DbUsername       string
+	DbPort           int
+	DbName           string
+	IntervalSec      int
+	displayPubIp     bool
+	Verbose          bool
+	requestMaxFreqMs int
 }
 
 func getMyPublicIp() (string, error) {
@@ -55,7 +56,7 @@ func main() {
 	}
 	sql, _ := clients.InitSql(params.DbPassword, params.DbHostname, params.DbUsername, params.DbName, params.DbPort)
 	api := clients.InitVelibApi(params.ApiToken)
-	exporter := InitDbExporter(api, sql, 200, 10)
+	exporter := InitDbExporter(api, sql, 200, time.Duration(params.requestMaxFreqMs))
 	for {
 		log.Infof("Running DB export")
 		err := exporter.RunExport()
@@ -77,6 +78,8 @@ func parseParams() (*Params, error) {
 	dbPort := flag.Int("db_port", 5432, "DB username")
 	intervalSeconds := flag.Int("interval_sec", 600, "Run interval in seconds")
 	verbose := flag.Bool("log", false, "verbose")
+	requestMaxFreqMs := flag.Int("request_max_freq_ms", 50, "Minimum nb on ms between 2 request to "+
+		"velib API ")
 	displayPubIp := flag.Bool("show_ip", false, "Log level")
 	flag.Parse()
 	if *dbHostname == "" {
@@ -101,14 +104,15 @@ func parseParams() (*Params, error) {
 		return nil, fmt.Errorf("db_name param required")
 	}
 	return &Params{
-		DbHostname:   *dbHostname,
-		ApiToken:     *velibApiToken,
-		DbPassword:   *dbPassword,
-		DbUsername:   *dbUserName,
-		DbPort:       *dbPort,
-		DbName:       *dbName,
-		Verbose:      *verbose,
-		IntervalSec:  *intervalSeconds,
-		displayPubIp: *displayPubIp,
+		DbHostname:       *dbHostname,
+		ApiToken:         *velibApiToken,
+		DbPassword:       *dbPassword,
+		DbUsername:       *dbUserName,
+		DbPort:           *dbPort,
+		DbName:           *dbName,
+		Verbose:          *verbose,
+		IntervalSec:      *intervalSeconds,
+		displayPubIp:     *displayPubIp,
+		requestMaxFreqMs: *requestMaxFreqMs,
 	}, nil
 }
