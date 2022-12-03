@@ -126,7 +126,8 @@ func (api *VelibApiClient) ParseGetStationDetailResponse(resp cycletls.Response)
 	var respJson []StationDetailApiResponse
 	err := json.Unmarshal([]byte(resp.Body), &respJson)
 	if err != nil {
-		return StationDetailApiResponse{}, err
+		return StationDetailApiResponse{}, fmt.Errorf("failed to umarshal response: %s", resp.Body)
+
 	}
 	shorterStationNameSize := 10000
 	shorterStationID := 0

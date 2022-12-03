@@ -41,15 +41,18 @@ func (exp *DbExporter) worker() {
 		<-exp.ticker
 		stationDetail, err := exp.api.ParseGetStationDetailResponse(res)
 		if err != nil {
-			panic(err)
+			log.Errorf("Failed to read station detail. %s", err.Error())
+			return
 		}
 		stationCode, err := strconv.Atoi(stationDetail.Station.Code)
 		if err != nil {
-			panic(err)
+			log.Errorf("Failed to convert station code (%s) to int %s", stationDetail.Station.Code, err.Error())
+			return
 		}
 		stationSql, err := exp.sql.GetStationByCode(stationCode)
 		if err != nil {
-			panic(err)
+			log.Errorf("Failed to convert station code (%s) to int %s", stationDetail.Station.Code, err.Error())
+			return
 		}
 		if stationSql == nil {
 			log.Debugf("Inserting station %s", stationDetail.Station.Name)
@@ -64,7 +67,8 @@ func (exp *DbExporter) worker() {
 			velibCode, _ := strconv.Atoi(bike.BikeName)
 			sqlBike, err := exp.sql.GetVelibByCode(velibCode)
 			if err != nil {
-				panic(err)
+				log.Errorf("Failed to get velib by code in SQL. (Code: %d): %s", velibCode, err.Error())
+				return
 			}
 			if sqlBike == nil {
 				err := exp.sql.InsertVelib(velibCode, exp.runId, bike.BikeElectric == "yes")
