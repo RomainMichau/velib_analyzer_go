@@ -17,10 +17,14 @@ var (
 	SelectAllVelibCode = "SELECT velib_code FROM public.velibs"
 	SelectVelibByCode  = `SELECT id, velib_code, electric
 		FROM public.velibs WHERE velib_code = $1;`
-	SelectLastStationForAllVelib = `select a.velib_code, a.station_code
-    	from velib_docked as a
-    	where "timestamp" = 
-        (select max( "timestamp") from velib_docked as b where a.velib_code =b.velib_code) `
+	SelectLastStationForAllVelib = `select velib_code , station_code
+		from (
+		select
+			velib_code, station_code,
+			row_number() over (partition by velib_code order by timestamp desc) as index
+		from velib_docked
+		) as sr
+		where index = 1`
 	SelectAllStations = `SELECT id, station_code, station_name, long, lat, station_code
 		FROM public.stations`
 	SelectStationByCode = `SELECT station_name, long, lat
