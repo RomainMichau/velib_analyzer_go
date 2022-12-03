@@ -44,6 +44,7 @@ var (
 	InsertVelibDocked = `INSERT INTO public.velib_docked
 		(velib_code, timestamp, station_code, run ,available)
 		VALUES($1, $2, $3, $4, $5)`
+	RegisterRunSuccess = `update run  set success  = true  , minor_issues_count = $1 where id = $2`
 )
 
 func InitSql(dbPassword, dbHostname, dbUsername, dbName string, dbPort int) (*VelibSqlClient, error) {
@@ -239,4 +240,23 @@ func (sql *VelibSqlClient) InsertRun(time time.Time) (int, error) {
 		return 0, err
 	}
 	return id, nil
+}
+
+func (sql *VelibSqlClient) RegisterSuccess(runId, minorIssueCount int) error {
+	ctx := context.Background()
+	tx, err := sql.connPool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	_, err = tx.Exec(ctx, RegisterRunSuccess, minorIssueCount, runId)
+	if err != nil {
+		return fmt.Errorf("failed to register Success in SQL: %w", err)
+	}
+
+	err = tx.Commit(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to commit register Success in SQL: %w", err)
+	}
+	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/RomainMichau/velib_finder/clients"
 	log "github.com/sirupsen/logrus"
 	"strconv"
@@ -12,14 +13,14 @@ type DbExporter struct {
 	api                    *clients.VelibApiClient
 	sql                    *clients.VelibSqlClient
 	ticker                 <-chan time.Time
-	i                      int
 	insertStationCount     int
 	insertVelibCount       int
 	insertVelibDockedCount int
 	runId                  int
-	mutex                  sync.Mutex
 	wg                     sync.WaitGroup
 	lastStationForVelib    map[int]int
+	minorErrorCount        int
+	majorErrorCount        int
 }
 
 func InitDbExporter(api *clients.VelibApiClient, sql *clients.VelibSqlClient, workerNb int,
@@ -35,6 +36,53 @@ func InitDbExporter(api *clients.VelibApiClient, sql *clients.VelibSqlClient, wo
 	return exporter
 }
 
+func (exp *DbExporter) RunExport() error {
+	exp.insertVelibDockedCount = 0
+	exp.minorErrorCount = 0
+	exp.insertVelibCount = 0
+	exp.insertStationCount = 0
+	start := time.Now()
+	runId, err := exp.sql.InsertRun(time.Now())
+	log.Infof("RunID: %d", runId)
+	exp.runId = runId
+	if err != nil {
+		exp.majorErrorCount++
+		return fmt.Errorf("failed to insert run in SQL: %w", err)
+	}
+
+	allStations, err := exp.api.GetAllStations()
+	if err != nil {
+		exp.majorErrorCount++
+		return fmt.Errorf("failed to all Station for all velib from SQL: %w", err)
+	}
+	startLastSt := time.Now()
+	exp.lastStationForVelib, err = exp.sql.GetLastStationForAllVelib()
+	elapsedLastSt := time.Since(startLastSt)
+	log.Infof("Took %s to get List of Last Station for All velib\n. ", elapsedLastSt)
+	if err != nil {
+		exp.majorErrorCount++
+		return fmt.Errorf("failed to get Last Statin for all velib from sql: %w", err)
+	}
+	for _, v := range allStations {
+		exp.wg.Add(1)
+
+		err := exp.api.QueueGetVelibRequest(v.Name)
+		if err != nil {
+			exp.majorErrorCount++
+			return err
+		}
+	}
+	elapsed := time.Since(start)
+	exp.wg.Wait()
+	err = exp.sql.RegisterSuccess(runId, exp.minorErrorCount)
+	if err != nil {
+		return fmt.Errorf("fail to register success: %w", err)
+	}
+	log.Infof("Run %d time took %s\n. Inserted Station: %d, Inserted Velib: %d, Insert Docked Velib: %d. Minor issues count: %d",
+		runId, elapsed, exp.insertStationCount, exp.insertVelibCount, exp.insertVelibDockedCount, exp.minorErrorCount)
+	return nil
+}
+
 func (exp *DbExporter) worker() {
 	for res := range exp.api.RespChan {
 		now := time.Now()
@@ -42,16 +90,22 @@ func (exp *DbExporter) worker() {
 		stationDetail, err := exp.api.ParseGetStationDetailResponse(res)
 		if err != nil {
 			log.Errorf("Failed to read station detail. %s", err.Error())
+			exp.minorErrorCount++
+			exp.wg.Done()
 			return
 		}
 		stationCode, err := strconv.Atoi(stationDetail.Station.Code)
 		if err != nil {
 			log.Errorf("Failed to convert station code (%s) to int %s", stationDetail.Station.Code, err.Error())
+			exp.wg.Done()
+			exp.minorErrorCount++
 			return
 		}
 		stationSql, err := exp.sql.GetStationByCode(stationCode)
 		if err != nil {
 			log.Errorf("Failed to convert station code (%s) to int %s", stationDetail.Station.Code, err.Error())
+			exp.wg.Done()
+			exp.minorErrorCount++
 			return
 		}
 		if stationSql == nil {
@@ -60,6 +114,9 @@ func (exp *DbExporter) worker() {
 				stationDetail.Station.Gps.Latitude, stationCode, exp.runId)
 			if err != nil {
 				log.Errorf("Failed to insert station %s. %s", stationDetail.Station.Name, err.Error())
+				exp.wg.Done()
+				exp.minorErrorCount++
+				return
 			}
 			exp.insertStationCount++
 		}
@@ -68,67 +125,34 @@ func (exp *DbExporter) worker() {
 			sqlBike, err := exp.sql.GetVelibByCode(velibCode)
 			if err != nil {
 				log.Errorf("Failed to get velib by code in SQL. (Code: %d): %s", velibCode, err.Error())
+				exp.wg.Done()
+				exp.minorErrorCount++
 				return
 			}
 			if sqlBike == nil {
 				err := exp.sql.InsertVelib(velibCode, exp.runId, bike.BikeElectric == "yes")
 				if err != nil {
 					log.Errorf("Failed to insert velib %d in SQL: %s", velibCode, err.Error())
+					exp.wg.Done()
+					exp.minorErrorCount++
 					return
 				}
 				exp.insertVelibCount++
 				log.Debugf("Inserting velib %d", velibCode)
 			}
-			exp.i++
 			lastStation, present := exp.lastStationForVelib[velibCode]
 			if !present || lastStation != stationCode {
-				log.Debug("Inserting velib docked", velibCode, stationCode)
+				log.Debug("Inserting velib docked ", velibCode, stationCode)
 				err := exp.sql.InsertVelibDocked(velibCode, stationCode, exp.runId, now, bike.BikeStatus == "disponible")
 				if err != nil {
 					log.Errorf("Failed to insert velib docked %d in SQL: %s", velibCode, err.Error())
+					exp.wg.Done()
+					exp.minorErrorCount++
 					return
 				}
 				exp.insertVelibDockedCount++
 			}
 		}
 		exp.wg.Done()
-
 	}
-}
-
-func (exp *DbExporter) RunExport() error {
-	exp.insertVelibDockedCount = 0
-	exp.insertVelibCount = 0
-	exp.insertStationCount = 0
-	start := time.Now()
-	runId, err := exp.sql.InsertRun(time.Now())
-	exp.runId = runId
-	if err != nil {
-		return err
-	}
-
-	allStations, err := exp.api.GetAllStations()
-	if err != nil {
-		return err
-	}
-	startLastSt := time.Now()
-	exp.lastStationForVelib, err = exp.sql.GetLastStationForAllVelib()
-	elapsedLastSt := time.Since(startLastSt)
-	log.Infof("Took %s to get List of Last Station for All velib\n. ", elapsedLastSt)
-	if err != nil {
-		return err
-	}
-	for _, v := range allStations {
-		exp.wg.Add(1)
-
-		err := exp.api.QueueGetVelibRequest(v.Name)
-		if err != nil {
-			return err
-		}
-	}
-	elapsed := time.Since(start)
-	exp.wg.Wait()
-	log.Infof("Run time took %s\n. Inserted Station: %d, Inserted Velib: %d, Insert Docked Velib: %d", elapsed,
-		exp.insertStationCount, exp.insertVelibCount, exp.insertVelibDockedCount)
-	return nil
 }
