@@ -27,7 +27,7 @@ func InitController(sql *clients.VelibSqlClient) *Controller {
 }
 
 func (c *Controller) Run() {
-	http.ListenAndServe(":8000", c.router)
+	http.ListenAndServe("0.0.0.0:8000", c.router)
 }
 
 func (c *Controller) getVelib(w http.ResponseWriter, r *http.Request) {
