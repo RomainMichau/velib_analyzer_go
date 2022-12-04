@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/RomainMichau/velib_finder/clients"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -26,8 +27,11 @@ func InitController(sql *clients.VelibSqlClient) *Controller {
 	return &controller
 }
 
-func (c *Controller) Run() {
-	http.ListenAndServe("0.0.0.0:8000", c.router)
+func (c *Controller) Run(port int) {
+	err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), c.router)
+	if err != nil {
+		panic(err.Error())
+	}
 }
 
 func (c *Controller) getVelib(w http.ResponseWriter, r *http.Request) {

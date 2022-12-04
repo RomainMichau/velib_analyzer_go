@@ -22,6 +22,7 @@ type Params struct {
 	Verbose        bool
 	requestMaxFreq int
 	noRunSync      bool
+	apiPort        int
 }
 
 func (p *Params) print() {
@@ -69,7 +70,7 @@ func main() {
 	}
 	sql, _ := clients.InitSql(params.DbPassword, params.DbHostname, params.DbUsername, params.DbName, params.DbPort)
 	controller := InitController(sql)
-	controller.Run()
+	controller.Run(params.apiPort)
 	api := clients.InitVelibApi(params.ApiToken)
 	exporter := InitDbExporter(api, sql, 200, time.Duration(1000/params.requestMaxFreq))
 	for {
@@ -96,6 +97,7 @@ func parseParams() (*Params, error) {
 	dbPort := flag.Int("db_port", 5432, "DB username")
 	intervalSeconds := flag.Int("interval_sec", 600, "Run interval in seconds")
 	verbose := flag.Bool("verbose", false, "verbose")
+	apiPort := flag.Int("api_port", 80, "verbose")
 	noRunSync := flag.Bool("no_run_sync", false, "run sync")
 	requestMaxFreqMs := flag.Int("request_max_freq", 10, "Max request to API per second"+
 		"velib API ")
@@ -134,5 +136,6 @@ func parseParams() (*Params, error) {
 		displayPubIp:   *displayPubIp,
 		requestMaxFreq: *requestMaxFreqMs,
 		noRunSync:      *noRunSync,
+		apiPort:        *apiPort,
 	}, nil
 }
