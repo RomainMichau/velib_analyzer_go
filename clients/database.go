@@ -31,7 +31,7 @@ var (
 		FROM public.stations WHERE station_code = $1`
 	SelectLastDockedStationForVelib = `SELECT "timestamp", station_code, available
 		FROM public.velib_docked code where velib_code = $1 order by "timestamp" desc limit 1`
-	SelectAllStationForVelib = `select "timestamp" , s.station_code ,s.station_name, s.long, s.lat  from velib_docked as v join stations s on s.station_code = v.station_code  
+	SelectAllStationForVelib = `select v."timestamp", v.available , s.station_code ,s.station_name, s.long, s.lat  from velib_docked as v join stations s on s.station_code = v.station_code  
 		where velib_code = $1 order by "timestamp" desc`
 	InsertVelib = `INSERT INTO public.velibs
 		(velib_code, electric, run)
@@ -166,27 +166,34 @@ func (sql *VelibSqlClient) GetAllStationsCode() (map[int]bool, error) {
 	return res, nil
 }
 
-func (sql *VelibSqlClient) GetAllStationForVelib() (map[time.Time]StationSqlEntity, error) {
-	res := map[time.Time]StationSqlEntity{}
-	rows, err := sql.connPool.Query(context.Background(), SelectAllStationForVelib)
+func (sql *VelibSqlClient) GetAllStationForVelib(velibCode int) ([]VelibDockedSqlDetails, error) {
+	var res []VelibDockedSqlDetails
+	rows, err := sql.connPool.Query(context.Background(), SelectAllStationForVelib, velibCode)
 	if err != nil {
 		return nil, fmt.Errorf("cannot fetch all stations: %w", err)
 	}
 	for rows.Next() {
+		var available bool
 		var stationCode int
 		var long, lat float32
 		var stationName string
 		var timest time.Time
-		err := rows.Scan(&timest, &stationCode, &stationName, &long, &lat)
+		err := rows.Scan(&timest, &available, &stationCode, &stationName, &long, &lat)
 		if err != nil {
 			return nil, err
 		}
-		res[timest] = StationSqlEntity{
-			Name:      stationName,
-			Longitude: long,
-			Latitude:  lat,
-			Code:      stationCode,
+		newElem := VelibDockedSqlDetails{
+			VelibCode: velibCode,
+			Station: StationSqlEntity{
+				Name:      stationName,
+				Longitude: long,
+				Latitude:  lat,
+				Code:      stationCode,
+			},
+			Available: available,
+			TimeStamp: timest,
 		}
+		res = append(res, newElem)
 	}
 	return res, nil
 }

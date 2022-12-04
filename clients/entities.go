@@ -28,3 +28,10 @@ type VelibDockedSql struct {
 	Available   bool
 	timeStamp   time.Time
 }
+
+type VelibDockedSqlDetails struct {
+	VelibCode int
+	Station   StationSqlEntity
+	Available bool
+	TimeStamp time.Time
+}
