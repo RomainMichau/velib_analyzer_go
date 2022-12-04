@@ -21,16 +21,18 @@ type Params struct {
 	displayPubIp   bool
 	Verbose        bool
 	requestMaxFreq int
+	runSync        bool
 }
 
 func (p *Params) print() {
 	log.Infof("====================== PARAM ======================")
-	log.Infof("DB host %s:%dn", p.DbHostname, p.DbPort)
+	log.Infof("DB host %s:%d", p.DbHostname, p.DbPort)
 	log.Infof("DB_name: %s", p.DbName)
 	log.Infof("DB_username: %s", p.DbUsername)
-	log.Infof("Waiting time btw 2 runs: %d", p.IntervalSec)
+	log.Infof("Waiting time btw 2 runs: %d sec", p.IntervalSec)
 	log.Infof("HTTP request max freq: %d", p.requestMaxFreq)
-	log.Infof("====================== =============================")
+	log.Infof("Run sync: %t", p.runSync)
+	log.Infof("====================================================")
 }
 
 func getMyPublicIp() (string, error) {
@@ -68,15 +70,17 @@ func main() {
 	sql, _ := clients.InitSql(params.DbPassword, params.DbHostname, params.DbUsername, params.DbName, params.DbPort)
 	api := clients.InitVelibApi(params.ApiToken)
 	exporter := InitDbExporter(api, sql, 200, time.Duration(1000/params.requestMaxFreq))
-	for {
-		log.Infof("Running DB export")
-		err := exporter.RunExport()
-		if err != nil {
-			log.Errorf("Fail to run DB export: %s", err.Error())
-		} else {
-			log.Infof("DB export ran successfully")
+	if params.runSync {
+		for {
+			log.Infof("Running DB export")
+			err := exporter.RunExport()
+			if err != nil {
+				log.Errorf("Fail to run DB export: %s", err.Error())
+			} else {
+				log.Infof("DB export ran successfully")
+			}
+			time.Sleep(time.Duration(params.IntervalSec) * time.Second)
 		}
-		time.Sleep(time.Duration(params.IntervalSec) * time.Second)
 	}
 }
 
@@ -89,6 +93,7 @@ func parseParams() (*Params, error) {
 	dbPort := flag.Int("db_port", 5432, "DB username")
 	intervalSeconds := flag.Int("interval_sec", 600, "Run interval in seconds")
 	verbose := flag.Bool("verbose", false, "verbose")
+	runSync := flag.Bool("run_sync", true, "run sync")
 	requestMaxFreqMs := flag.Int("request_max_freq", 10, "Max request to API per second"+
 		"velib API ")
 	displayPubIp := flag.Bool("show_ip", false, "Log level")
@@ -125,5 +130,6 @@ func parseParams() (*Params, error) {
 		IntervalSec:    *intervalSeconds,
 		displayPubIp:   *displayPubIp,
 		requestMaxFreq: *requestMaxFreqMs,
+		runSync:        *runSync,
 	}, nil
 }
