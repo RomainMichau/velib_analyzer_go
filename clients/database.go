@@ -31,7 +31,8 @@ var (
 		FROM public.stations WHERE station_code = $1`
 	SelectLastDockedStationForVelib = `SELECT "timestamp", station_code, available
 		FROM public.velib_docked code where velib_code = $1 order by "timestamp" desc limit 1`
-
+	SelectAllStationForVelib = `select "timestamp" , s.station_name, s.long, s.lat  from velib_docked as v join stations s on s.station_code = v.station_code  
+		where velib_code = $1 order by "timestamp" desc`
 	InsertVelib = `INSERT INTO public.velibs
 		(velib_code, electric, run)
 		VALUES($1, $2, $3);`

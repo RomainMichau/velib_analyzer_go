@@ -11,16 +11,23 @@ import (
 )
 
 type Params struct {
-	DbHostname       string
-	ApiToken         string
-	DbPassword       string
-	DbUsername       string
-	DbPort           int
-	DbName           string
-	IntervalSec      int
-	displayPubIp     bool
-	Verbose          bool
-	requestMaxFreqMs int
+	DbHostname     string
+	ApiToken       string
+	DbPassword     string
+	DbUsername     string
+	DbPort         int
+	DbName         string
+	IntervalSec    int
+	displayPubIp   bool
+	Verbose        bool
+	requestMaxFreq int
+}
+
+func (p *Params) print() {
+	log.Infof("====================== PARAM ======================")
+	log.Infof("DB host %s:%d\n DB name: %s. DB User: %s\n", p.DbHostname, p.DbPort, p.DbName, p.DbUsername)
+	log.Infof("Waiting time between 2 run: %d sec, max req freq: %d\n", p.IntervalSec, p.requestMaxFreq)
+	log.Infof("====================== =============================")
 }
 
 func getMyPublicIp() (string, error) {
@@ -38,6 +45,10 @@ func getMyPublicIp() (string, error) {
 
 func main() {
 	params, err := parseParams()
+	if err != nil {
+		panic(fmt.Errorf("failed to parse param: %w", err))
+	}
+	params.print()
 	if params.Verbose {
 		log.SetLevel(log.DebugLevel)
 	} else {
@@ -51,12 +62,9 @@ func main() {
 			log.Infof("Public IP: %s\n", ip)
 		}
 	}
-	if err != nil {
-		panic(err)
-	}
 	sql, _ := clients.InitSql(params.DbPassword, params.DbHostname, params.DbUsername, params.DbName, params.DbPort)
 	api := clients.InitVelibApi(params.ApiToken)
-	exporter := InitDbExporter(api, sql, 200, time.Duration(params.requestMaxFreqMs))
+	exporter := InitDbExporter(api, sql, 200, time.Duration(1000/params.requestMaxFreq))
 	for {
 		log.Infof("Running DB export")
 		err := exporter.RunExport()
@@ -77,8 +85,8 @@ func parseParams() (*Params, error) {
 	dbUserName := flag.String("db_user", "", "DB username")
 	dbPort := flag.Int("db_port", 5432, "DB username")
 	intervalSeconds := flag.Int("interval_sec", 600, "Run interval in seconds")
-	verbose := flag.Bool("log", false, "verbose")
-	requestMaxFreqMs := flag.Int("request_max_freq_ms", 50, "Minimum nb on ms between 2 request to "+
+	verbose := flag.Bool("verbose", false, "verbose")
+	requestMaxFreqMs := flag.Int("request_max_freq", 10, "Max request to API per second"+
 		"velib API ")
 	displayPubIp := flag.Bool("show_ip", false, "Log level")
 	flag.Parse()
@@ -91,8 +99,8 @@ func parseParams() (*Params, error) {
 	if *dbPort == 0 {
 		return nil, fmt.Errorf("db_port param required")
 	}
-	if *intervalSeconds == 0 {
-		return nil, fmt.Errorf("interval_sec param required")
+	if *intervalSeconds <= 0 {
+		return nil, fmt.Errorf("interval_sec param required and cannot be <= 0")
 	}
 	if *dbPassword == "" {
 		return nil, fmt.Errorf("db_password param required")
@@ -104,15 +112,15 @@ func parseParams() (*Params, error) {
 		return nil, fmt.Errorf("db_name param required")
 	}
 	return &Params{
-		DbHostname:       *dbHostname,
-		ApiToken:         *velibApiToken,
-		DbPassword:       *dbPassword,
-		DbUsername:       *dbUserName,
-		DbPort:           *dbPort,
-		DbName:           *dbName,
-		Verbose:          *verbose,
-		IntervalSec:      *intervalSeconds,
-		displayPubIp:     *displayPubIp,
-		requestMaxFreqMs: *requestMaxFreqMs,
+		DbHostname:     *dbHostname,
+		ApiToken:       *velibApiToken,
+		DbPassword:     *dbPassword,
+		DbUsername:     *dbUserName,
+		DbPort:         *dbPort,
+		DbName:         *dbName,
+		Verbose:        *verbose,
+		IntervalSec:    *intervalSeconds,
+		displayPubIp:   *displayPubIp,
+		requestMaxFreq: *requestMaxFreqMs,
 	}, nil
 }
