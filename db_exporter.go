@@ -65,7 +65,7 @@ func (exp *DbExporter) RunExport() error {
 	}
 	for _, v := range allStations {
 		exp.wg.Add(1)
-
+		<-exp.ticker
 		err := exp.api.QueueGetVelibRequest(v.Name)
 		if err != nil {
 			exp.majorErrorCount++
@@ -86,7 +86,6 @@ func (exp *DbExporter) RunExport() error {
 func (exp *DbExporter) worker() {
 	for res := range exp.api.RespChan {
 		now := time.Now()
-		<-exp.ticker
 		stationDetail, err := exp.api.ParseGetStationDetailResponse(res)
 		if err != nil {
 			log.Errorf("Failed to read station detail. %s", err.Error())
