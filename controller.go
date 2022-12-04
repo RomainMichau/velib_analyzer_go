@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/RomainMichau/velib_finder/clients"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 )
@@ -35,6 +36,7 @@ func (c *Controller) Run(port int) {
 }
 
 func (c *Controller) getVelib(w http.ResponseWriter, r *http.Request) {
+	log.Infof("Call received")
 	vars := mux.Vars(r)
 	code, present := vars["code"]
 	if !present {
