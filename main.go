@@ -25,8 +25,11 @@ type Params struct {
 
 func (p *Params) print() {
 	log.Infof("====================== PARAM ======================")
-	log.Infof("DB host %s:%d\n DB name: %s. DB User: %s\n", p.DbHostname, p.DbPort, p.DbName, p.DbUsername)
-	log.Infof("Waiting time between 2 run: %d sec, max req freq: %d\n", p.IntervalSec, p.requestMaxFreq)
+	log.Infof("DB host %s:%dn", p.DbHostname, p.DbPort)
+	log.Infof("DB_name: %s", p.DbName)
+	log.Infof("DB_username: %s", p.DbUsername)
+	log.Infof("Waiting time btw 2 runs: %d", p.IntervalSec)
+	log.Infof("HTTP request max freq: %d", p.requestMaxFreq)
 	log.Infof("====================== =============================")
 }
 
@@ -59,7 +62,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		} else {
-			log.Infof("Public IP: %s\n", ip)
+			log.Infof("Public IP: %s", ip)
 		}
 	}
 	sql, _ := clients.InitSql(params.DbPassword, params.DbHostname, params.DbUsername, params.DbName, params.DbPort)

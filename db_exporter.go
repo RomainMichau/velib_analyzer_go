@@ -58,7 +58,7 @@ func (exp *DbExporter) RunExport() error {
 	startLastSt := time.Now()
 	exp.lastStationForVelib, err = exp.sql.GetLastStationForAllVelib()
 	elapsedLastSt := time.Since(startLastSt)
-	log.Infof("Took %s to get List of Last Station for All velib\n. ", elapsedLastSt)
+	log.Infof("Took %s to get List of Last Station for All velib. ", elapsedLastSt)
 	if err != nil {
 		exp.majorErrorCount++
 		return fmt.Errorf("failed to get Last Statin for all velib from sql: %w", err)
@@ -78,7 +78,7 @@ func (exp *DbExporter) RunExport() error {
 	if err != nil {
 		return fmt.Errorf("fail to register success: %w", err)
 	}
-	log.Infof("Run %d time took %s\n. Inserted Station: %d, Inserted Velib: %d, Insert Docked Velib: %d. Minor issues count: %d",
+	log.Infof("Run %d time took %s. Inserted Station: %d, Inserted Velib: %d, Insert Docked Velib: %d. Minor issues count: %d",
 		runId, elapsed, exp.insertStationCount, exp.insertVelibCount, exp.insertVelibDockedCount, exp.minorErrorCount)
 	return nil
 }

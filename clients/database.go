@@ -53,7 +53,7 @@ func InitSql(dbPassword, dbHostname, dbUsername, dbName string, dbPort int) (*Ve
 		url.QueryEscape(dbUsername), url.QueryEscape(dbPassword), dbHostname, dbPort, dbName)
 	dbpool, err := pgxpool.New(context.Background(), databaseUrl)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create connection pool: %v\n", err)
+		return nil, fmt.Errorf("unable to create connection pool: %v", err)
 	}
 	return &VelibSqlClient{
 		connPool: dbpool,
