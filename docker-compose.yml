@@ -1,0 +1,39 @@
+services:
+  gluetun:
+    image: qmcgaw/gluetun
+    ports:
+      - "${API_PORT}:81"
+    cap_add:
+      - NET_ADMIN
+    environment:
+      VPN_SERVICE_PROVIDER: 'nordvpn'
+      OPENVPN_PASSWORD: ${NORDVPN_PASSWORD}
+      OPENVPN_USER: ${NORDVPN_USERNAME}
+      SERVER_REGIONS: ${Netherlands-Belgium}
+  velib:
+    image: velib_analyzer_go
+    network_mode: "service:gluetun"
+    build: .
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    command:
+      - --db_hostname
+      - ${DB_HOSTNAME}
+      - --db_password
+      - ${DB_PASSWORD}
+      - --db_user
+      - ${DB_USER:-postgres}
+      - --db_name
+      - ${DB_NAME:-velib_analyzer}
+      - --velib_api_token
+      - ${VELIB_API_TOKEN}
+      - --interval_sec
+      - ${INTERVAL_SEC:-1}
+      - --show_ip
+      - --request_max_freq
+      - ${REQ_MAX_FREQ:-8}
+      - --api_port
+      - '81'
+      - --db_port
+      - ${DB_PORT:-5432}

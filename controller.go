@@ -29,14 +29,12 @@ func InitController(sql *clients.VelibSqlClient) *Controller {
 }
 
 func (c *Controller) Run(port int) {
-	err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), c.router)
-	if err != nil {
-		panic(err.Error())
-	}
+	log.Infof("Starting controller on port %d", port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), c.router))
 }
 
 func (c *Controller) getVelib(w http.ResponseWriter, r *http.Request) {
-	log.Infof("Call received")
+	log.Infof("Call received mate4")
 	vars := mux.Vars(r)
 	code, present := vars["code"]
 	if !present {

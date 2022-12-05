@@ -32,7 +32,7 @@ func (p *Params) print() {
 	log.Infof("DB_username: %s", p.DbUsername)
 	log.Infof("Waiting time btw 2 runs: %d sec", p.IntervalSec)
 	log.Infof("HTTP request max freq: %d", p.requestMaxFreq)
-	log.Infof("Run sync: %t", p.noRunSync)
+	log.Infof("Run sync disabled: %t", p.noRunSync)
 	log.Infof("====================================================")
 }
 
@@ -69,8 +69,8 @@ func main() {
 		}
 	}
 	sql, _ := clients.InitSql(params.DbPassword, params.DbHostname, params.DbUsername, params.DbName, params.DbPort)
-	//controller := InitController(sql)
-	//controller.Run(params.apiPort)
+	controller := InitController(sql)
+	go controller.Run(params.apiPort)
 	api := clients.InitVelibApi(params.ApiToken)
 	exporter := InitDbExporter(api, sql, 200, time.Duration(1000/params.requestMaxFreq))
 	for {
