@@ -5,7 +5,6 @@ import (
 	"github.com/Danny-Dasilva/CycleTLS/cycletls"
 	"github.com/RomainMichau/cloudscraper_go/cloudscraper"
 	jsoniter "github.com/json-iterator/go"
-	log "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 	"time"
@@ -115,7 +114,6 @@ func (api *VelibApiClient) QueueGetVelibRequest(stationName string) error {
 		Headers: headers,
 		Timeout: 1000,
 	}
-	log.Infof("YO")
 	api.channel.Queue(baseUrl+stationDetailsEndpoint, options, "POST")
 	return nil
 }

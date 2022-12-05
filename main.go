@@ -69,8 +69,8 @@ func main() {
 		}
 	}
 	sql, _ := clients.InitSql(params.DbPassword, params.DbHostname, params.DbUsername, params.DbName, params.DbPort)
-	controller := InitController(sql)
-	controller.Run(params.apiPort)
+	//controller := InitController(sql)
+	//controller.Run(params.apiPort)
 	api := clients.InitVelibApi(params.ApiToken)
 	exporter := InitDbExporter(api, sql, 200, time.Duration(1000/params.requestMaxFreq))
 	for {
@@ -103,6 +103,7 @@ func parseParams() (*Params, error) {
 		"velib API ")
 	displayPubIp := flag.Bool("show_ip", false, "Log level")
 	flag.Parse()
+	log.Infof(*dbHostname)
 	if *dbHostname == "" {
 		return nil, fmt.Errorf("db_hostname param required")
 	}
