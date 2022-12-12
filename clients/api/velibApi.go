@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/Danny-Dasilva/CycleTLS/cycletls"
 	"github.com/RomainMichau/cloudscraper_go/cloudscraper"
-	"github.com/RomainMichau/velib_finder/clients"
+	"github.com/RomainMichau/velib_analyzer_go/clients"
 	jsoniter "github.com/json-iterator/go"
 	"strconv"
 	"strings"

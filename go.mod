@@ -1,4 +1,4 @@
-module github.com/RomainMichau/velib_finder
+module github.com/RomainMichau/velib_analyzer_go
 
 go 1.19
 

@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/RomainMichau/velib_finder/clients/database"
+	"github.com/RomainMichau/velib_analyzer_go/clients/database"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"

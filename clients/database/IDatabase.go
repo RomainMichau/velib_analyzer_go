@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/RomainMichau/velib_finder/clients"
+	"github.com/RomainMichau/velib_analyzer_go/clients"
 	"time"
 )
 

@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/RomainMichau/velib_finder/clients/api"
-	"github.com/RomainMichau/velib_finder/clients/database"
+	"github.com/RomainMichau/velib_analyzer_go/clients/api"
+	"github.com/RomainMichau/velib_analyzer_go/clients/database"
 	log "github.com/sirupsen/logrus"
 	"strconv"
 	"sync"

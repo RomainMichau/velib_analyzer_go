@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
-	"github.com/RomainMichau/velib_finder/clients"
+	"github.com/RomainMichau/velib_analyzer_go/clients"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"net/url"

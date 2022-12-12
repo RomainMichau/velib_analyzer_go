@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/RomainMichau/velib_finder/clients/api"
-	"github.com/RomainMichau/velib_finder/clients/database"
+	"github.com/RomainMichau/velib_analyzer_go/clients/api"
+	"github.com/RomainMichau/velib_analyzer_go/clients/database"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -129,6 +129,9 @@ func parseParams() (*Params, error) {
 	}
 	if *dbName == "" {
 		return nil, fmt.Errorf("db_name param required")
+	}
+	if *requestMaxFreqMs > 50 {
+		return nil, fmt.Errorf("request_max_freq cannot be > 50")
 	}
 	return &Params{
 		DbHostname:     *dbHostname,
