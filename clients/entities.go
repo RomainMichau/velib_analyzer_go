@@ -35,3 +35,9 @@ type VelibDockedSqlDetails struct {
 	Available bool
 	TimeStamp time.Time
 }
+
+type VelibArrival struct {
+	Avg  float32
+	Dow  int
+	Hour int
+}

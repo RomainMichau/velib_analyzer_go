@@ -46,7 +46,10 @@ var (
 	InsertVelibDocked = `INSERT INTO public.velib_docked
 		(velib_code, timestamp, station_code, run ,available)
 		VALUES($1, $2, $3, $4, $5)`
-	RegisterRunSuccess = `update run  set success  = true  , minor_issues_count = $1 where id = $2`
+	RegisterRunSuccess        = `update run  set success  = true  , minor_issues_count = $1 where id = $2`
+	GetVelibArrivalPerStation = `SELECT avg, dow, "hour"
+		FROM public.avg_velib_per_station_dow_hr where station_code = $1  order by dow, "hour" ;
+`
 )
 
 func InitDatabase(dbPassword, dbHostname, dbUsername, dbName string, dbPort int) (*VelibSqlClient, error) {
@@ -163,6 +166,28 @@ func (sql *VelibSqlClient) GetAllStationsCode() (map[int]bool, error) {
 			return nil, err
 		}
 		res[stationCode] = true
+	}
+	return res, nil
+}
+
+func (sql *VelibSqlClient) GetVelibArrivalPerStation(stationCode int) ([]clients.VelibArrival, error) {
+	var res []clients.VelibArrival
+	rows, err := sql.connPool.Query(context.Background(), GetVelibArrivalPerStation, stationCode)
+	if err != nil {
+		return nil, fmt.Errorf("cannot fetch all stations: %w", err)
+	}
+	for rows.Next() {
+		var avg float32
+		var dow, hour int
+		err := rows.Scan(&avg, &dow, &hour)
+		if err != nil {
+			return nil, fmt.Errorf("[GetVelibArrivalPerStation] cannot parse SQL resp: %w", err)
+		}
+		res = append(res, clients.VelibArrival{
+			Avg:  avg,
+			Dow:  dow,
+			Hour: hour,
+		})
 	}
 	return res, nil
 }
