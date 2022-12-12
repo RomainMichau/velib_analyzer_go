@@ -79,6 +79,10 @@ func (exp *DbExporter) RunExport() error {
 	if err != nil {
 		return fmt.Errorf("fail to register success: %w", err)
 	}
+	err = exp.database.PostSync()
+	if err != nil {
+		return fmt.Errorf("[RunExport] fail to run post sync: %w", err)
+	}
 	log.Infof("Run %d time took %s. Inserted Station: %d, Inserted Velib: %d, Insert Docked Velib: %d. Minor issues count: %d",
 		runId, elapsed, exp.insertStationCount, exp.insertVelibCount, exp.insertVelibDockedCount, exp.minorErrorCount)
 	return nil

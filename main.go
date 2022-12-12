@@ -70,6 +70,10 @@ func main() {
 		}
 	}
 	sql, _ := database.InitDatabase(params.DbPassword, params.DbHostname, params.DbUsername, params.DbName, params.DbPort)
+	err = sql.PostSync()
+	if err != nil {
+		return
+	}
 	controller := InitController(sql)
 	go controller.Run(params.apiPort)
 	api := api.InitVelibApi(params.ApiToken)

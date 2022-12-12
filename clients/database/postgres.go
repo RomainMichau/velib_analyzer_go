@@ -47,8 +47,8 @@ var (
 		(velib_code, timestamp, station_code, run ,available)
 		VALUES($1, $2, $3, $4, $5)`
 	RegisterRunSuccess        = `update run  set success  = true  , minor_issues_count = $1 where id = $2`
-	GetVelibArrivalPerStation = `SELECT avg, dow, "hour"
-		FROM public.avg_velib_per_station_dow_hr where station_code = $1  order by dow, "hour" ;
+	GetVelibArrivalPerStation = `SELECT avg, dow_utc, hour_utc
+		FROM public.avg_velib_per_station_dow_hr where station_code = $1  order by dow_utc, hour_utc ;
 `
 )
 
@@ -316,6 +316,19 @@ func (sql *VelibSqlClient) RegisterSuccess(runId, minorIssueCount int) error {
 	err = tx.Commit(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to commit register Success in SQL: %w", err)
+	}
+	return nil
+}
+
+func (sql *VelibSqlClient) PostSync() error {
+	query := "REFRESH MATERIALIZED VIEW avg_velib_per_station_dow_hr"
+	ctx := context.Background()
+	_, err := sql.connPool.Exec(ctx, query)
+	if err != nil {
+		return err
+	}
+	if err != nil {
+		return fmt.Errorf("failed to to sync mat view in SQL: %w", err)
 	}
 	return nil
 }

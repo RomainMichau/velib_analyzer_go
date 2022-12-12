@@ -18,4 +18,5 @@ type IDatabase interface {
 	InsertVelibDocked(velibCode, stationCode, runId int, time time.Time, available bool) error
 	InsertRun(time time.Time) (int, error)
 	RegisterSuccess(runId, minorIssueCount int) error
+	PostSync() error
 }

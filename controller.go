@@ -51,7 +51,12 @@ func (c *Controller) getVelibArrival(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	res, _ := c.sql.GetVelibArrivalPerStation(codeI)
+	res, err := c.sql.GetVelibArrivalPerStation(codeI)
+	if err != nil {
+		log.Errorf("[getVelibArrival] Error when querying sql: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(res)
 }
