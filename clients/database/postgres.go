@@ -1,8 +1,9 @@
-package clients
+package database
 
 import (
 	"context"
 	"fmt"
+	"github.com/RomainMichau/velib_finder/clients"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"net/url"
@@ -48,7 +49,7 @@ var (
 	RegisterRunSuccess = `update run  set success  = true  , minor_issues_count = $1 where id = $2`
 )
 
-func InitSql(dbPassword, dbHostname, dbUsername, dbName string, dbPort int) (*VelibSqlClient, error) {
+func InitDatabase(dbPassword, dbHostname, dbUsername, dbName string, dbPort int) (*VelibSqlClient, error) {
 	databaseUrl := fmt.Sprintf("postgres://%s:%s@%s:%d/%s",
 		url.QueryEscape(dbUsername), url.QueryEscape(dbPassword), dbHostname, dbPort, dbName)
 	dbpool, err := pgxpool.New(context.Background(), databaseUrl)
@@ -89,7 +90,7 @@ func (sql *VelibSqlClient) GetLastStationForAllVelib() (map[int]int, error) {
 	return res, nil
 }
 
-func (sql *VelibSqlClient) GetVelibByCode(code int) (*VelibSqlEntity, error) {
+func (sql *VelibSqlClient) GetVelibByCode(code int) (*clients.VelibSqlEntity, error) {
 	row := sql.connPool.QueryRow(context.Background(), SelectVelibByCode, code)
 	var id int
 	var rcode int
@@ -101,14 +102,14 @@ func (sql *VelibSqlClient) GetVelibByCode(code int) (*VelibSqlEntity, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &VelibSqlEntity{
+	return &clients.VelibSqlEntity{
 		Id:       id,
 		Code:     rcode,
 		Electric: electric,
 	}, nil
 }
 
-func (sql *VelibSqlClient) GetLastDockedForVelib(velibCode int) (*VelibDockedSql, error) {
+func (sql *VelibSqlClient) GetLastDockedForVelib(velibCode int) (*clients.VelibDockedSql, error) {
 	time.Now()
 	row := sql.connPool.QueryRow(context.Background(), SelectLastDockedStationForVelib, velibCode)
 	var stationCode int
@@ -121,15 +122,15 @@ func (sql *VelibSqlClient) GetLastDockedForVelib(velibCode int) (*VelibDockedSql
 	if err != nil {
 		return nil, err
 	}
-	return &VelibDockedSql{
+	return &clients.VelibDockedSql{
 		VelibCode:   velibCode,
 		StationCode: stationCode,
 		Available:   available,
-		timeStamp:   timestamp,
+		TimeStamp:   timestamp,
 	}, nil
 }
 
-func (sql *VelibSqlClient) GetStationByCode(code int) (*StationSqlEntity, error) {
+func (sql *VelibSqlClient) GetStationByCode(code int) (*clients.StationSqlEntity, error) {
 	row := sql.connPool.QueryRow(context.Background(), SelectStationByCode, code)
 	var name string
 	var longitude float32
@@ -141,7 +142,7 @@ func (sql *VelibSqlClient) GetStationByCode(code int) (*StationSqlEntity, error)
 	if err != nil {
 		return nil, err
 	}
-	return &StationSqlEntity{
+	return &clients.StationSqlEntity{
 		Name:      name,
 		Longitude: longitude,
 		Latitude:  latitude,
@@ -166,8 +167,8 @@ func (sql *VelibSqlClient) GetAllStationsCode() (map[int]bool, error) {
 	return res, nil
 }
 
-func (sql *VelibSqlClient) GetAllStationForVelib(velibCode int) ([]VelibDockedSqlDetails, error) {
-	var res []VelibDockedSqlDetails
+func (sql *VelibSqlClient) GetAllStationForVelib(velibCode int) ([]clients.VelibDockedSqlDetails, error) {
+	var res []clients.VelibDockedSqlDetails
 	rows, err := sql.connPool.Query(context.Background(), SelectAllStationForVelib, velibCode)
 	if err != nil {
 		return nil, fmt.Errorf("cannot fetch all stations: %w", err)
@@ -182,9 +183,9 @@ func (sql *VelibSqlClient) GetAllStationForVelib(velibCode int) ([]VelibDockedSq
 		if err != nil {
 			return nil, err
 		}
-		newElem := VelibDockedSqlDetails{
+		newElem := clients.VelibDockedSqlDetails{
 			VelibCode: velibCode,
-			Station: StationSqlEntity{
+			Station: clients.StationSqlEntity{
 				Name:      stationName,
 				Longitude: long,
 				Latitude:  lat,

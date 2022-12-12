@@ -1,9 +1,10 @@
-package clients
+package api
 
 import (
 	"fmt"
 	"github.com/Danny-Dasilva/CycleTLS/cycletls"
 	"github.com/RomainMichau/cloudscraper_go/cloudscraper"
+	"github.com/RomainMichau/velib_finder/clients"
 	jsoniter "github.com/json-iterator/go"
 	"strconv"
 	"strings"
@@ -141,7 +142,7 @@ func (api *VelibApiClient) ParseGetStationDetailResponse(resp cycletls.Response)
 	return respJson[shorterStationID], nil
 }
 
-func (api *VelibApiClient) GetAllStations() ([]VelibApiEntity, error) {
+func (api *VelibApiClient) GetAllStations() ([]clients.VelibApiEntity, error) {
 	headers := map[string]string{"Authorization": "Basic bW9iYTokMnkkMTAkRXNJYUk2LkRsZTh1elJGLlZGTEVKdTJ5MDJkc2xILnY3cUVvUkJHZ041MHNldUZpUkU1Ny4"}
 	res, err := api.channel.Get(baseUrl+allStationsEndpoint, headers, "")
 	if err != nil {
@@ -152,14 +153,14 @@ func (api *VelibApiClient) GetAllStations() ([]VelibApiEntity, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to jsonify %s: %w", res.Body, err)
 	}
-	var cleanedStation []VelibApiEntity
+	var cleanedStation []clients.VelibApiEntity
 	for _, v := range respJson {
 		stationCode := strings.ReplaceAll(v.Station.Code, "_relais", "")
 		code, err := strconv.Atoi(stationCode)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot cast code to int: %w", err)
 		}
-		cleanedStation = append(cleanedStation, VelibApiEntity{
+		cleanedStation = append(cleanedStation, clients.VelibApiEntity{
 			Code:      code,
 			Latitude:  v.Station.Gps.Latitude,
 			Longitude: v.Station.Gps.Longitude,

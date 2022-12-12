@@ -26,7 +26,7 @@ type VelibDockedSql struct {
 	VelibCode   int
 	StationCode int
 	Available   bool
-	timeStamp   time.Time
+	TimeStamp   time.Time
 }
 
 type VelibDockedSqlDetails struct {

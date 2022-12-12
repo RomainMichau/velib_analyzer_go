@@ -89,3 +89,25 @@ CREATE TABLE public.velib_docked (
                                      CONSTRAINT velib_docked_fk FOREIGN KEY (station_code) REFERENCES public.stations(station_code)
 );
 CREATE UNIQUE INDEX velib_docked_velib_code_idx ON public.velib_docked USING btree (velib_code, "timestamp");
+
+
+-- public.avg_velib_per_station_dow_hr source
+
+CREATE MATERIALIZED VIEW public.avg_velib_per_station_dow_hr
+    TABLESPACE pg_default
+AS SELECT avg(stuff.nb_docked) AS avg,
+          stuff.station_code,
+          stuff.dow,
+          stuff.hour
+   FROM ( SELECT date_trunc('hour'::text, vd."timestamp") AS td,
+                 count(vd.velib_code) AS nb_docked,
+                 vd.station_code,
+                 date_part('isodow'::text, vd."timestamp") AS dow,
+                 date_part('hour'::text, vd."timestamp") AS hour
+          FROM velib_docked vd
+          GROUP BY vd.station_code, (date_trunc('hour'::text, vd."timestamp")), (date_part('isodow'::text, vd."timestamp")), (date_part('hour'::text, vd."timestamp"))
+          ORDER BY vd.station_code, (date_trunc('hour'::text, vd."timestamp"))) stuff
+   GROUP BY stuff.station_code, stuff.dow, stuff.hour
+WITH DATA;
+
+CREATE UNIQUE INDEX avg_velib_per_station_dow_hr_station_code_idx ON public.avg_velib_per_station_dow_hr (station_code,dow,"hour");

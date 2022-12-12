@@ -3,7 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/RomainMichau/velib_finder/clients"
+	"github.com/RomainMichau/velib_finder/clients/api"
+	"github.com/RomainMichau/velib_finder/clients/database"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -68,10 +69,10 @@ func main() {
 			log.Infof("Public IP: %s", ip)
 		}
 	}
-	sql, _ := clients.InitSql(params.DbPassword, params.DbHostname, params.DbUsername, params.DbName, params.DbPort)
+	sql, _ := database.InitDatabase(params.DbPassword, params.DbHostname, params.DbUsername, params.DbName, params.DbPort)
 	controller := InitController(sql)
 	go controller.Run(params.apiPort)
-	api := clients.InitVelibApi(params.ApiToken)
+	api := api.InitVelibApi(params.ApiToken)
 	exporter := InitDbExporter(api, sql, 200, time.Duration(1000/params.requestMaxFreq))
 	for {
 		if !params.noRunSync {

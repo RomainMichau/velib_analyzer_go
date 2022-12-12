@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/RomainMichau/velib_finder/clients"
+	"github.com/RomainMichau/velib_finder/clients/database"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -11,11 +11,11 @@ import (
 )
 
 type Controller struct {
-	sql    *clients.VelibSqlClient
+	sql    *database.VelibSqlClient
 	router *mux.Router
 }
 
-func InitController(sql *clients.VelibSqlClient) *Controller {
+func InitController(sql *database.VelibSqlClient) *Controller {
 	r := mux.NewRouter()
 	controller := Controller{
 		sql:    sql,
