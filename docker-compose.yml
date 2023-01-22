@@ -13,7 +13,7 @@ services:
   velib:
     image: velib_analyzer_go
     network_mode: "service:gluetun"
-    build: .
+    build: ..
     depends_on:
       gluetun:
         condition: service_healthy

@@ -1,3 +1,10 @@
+webapp/node_modules
+webapp/npm-debug.log
+docker-compose*
+webapp/.git
+webapp/.gitignore
+webapp/.vscode
+webapp/dist
 .git
 .gitignore
 .idea
