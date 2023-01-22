@@ -22,14 +22,16 @@ type DbExporter struct {
 	lastStationForVelib    map[int]int
 	minorErrorCount        int
 	majorErrorCount        int
+	syncTimeout            time.Duration
 }
 
 func InitDbExporter(api *api.VelibApiClient, sql database.IDatabase, workerNb int,
-	requestMaxFreqMs time.Duration) *DbExporter {
+	requestMaxFreqMs time.Duration, syncTimeout time.Duration) *DbExporter {
 	exporter := &DbExporter{
-		api:      api,
-		database: sql,
-		ticker:   time.Tick(requestMaxFreqMs * time.Millisecond),
+		api:         api,
+		database:    sql,
+		ticker:      time.Tick(requestMaxFreqMs * time.Millisecond),
+		syncTimeout: syncTimeout,
 	}
 	for i := 0; i < workerNb; i++ {
 		go exporter.worker()
@@ -73,8 +75,19 @@ func (exp *DbExporter) RunExport() error {
 			return err
 		}
 	}
+	log.Debugf("All station request queued")
 	elapsed := time.Since(start)
-	exp.wg.Wait()
+	exp.wg.Add(1)
+	timeout := waitWgWithTimeout(&exp.wg, exp.syncTimeout)
+	if timeout {
+		error := fmt.Sprintf("WG Sync TimedOut!!!!. Waited %s", exp.syncTimeout.String())
+		log.Errorf(error)
+		return fmt.Errorf(error)
+	}
+
+	if exp.minorErrorCount > 20 {
+		return fmt.Errorf("[db_exporter] too much minor error: %d", exp.minorErrorCount)
+	}
 	err = exp.database.RegisterSuccess(runId, exp.minorErrorCount)
 	if err != nil {
 		return fmt.Errorf("fail to register success: %w", err)
@@ -158,5 +171,19 @@ func (exp *DbExporter) worker() {
 			}
 		}
 		exp.wg.Done()
+	}
+}
+
+func waitWgWithTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return false // completed normally
+	case <-time.After(timeout):
+		return true // timed out
 	}
 }

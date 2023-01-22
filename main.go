@@ -61,6 +61,7 @@ func main() {
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
+
 	if params.displayPubIp {
 		ip, err := getMyPublicIp()
 		if err != nil {
@@ -74,17 +75,19 @@ func main() {
 	if err != nil {
 		return
 	}
-	controller := InitController(sql)
+	metric := Metrics{failureCount: 0}
+	controller := InitController(sql, &metric)
 	go controller.Run(params.apiPort)
-	api := api.InitVelibApi(params.ApiToken)
-	exporter := InitDbExporter(api, sql, 200, time.Duration(1000/params.requestMaxFreq))
+	velibApi := api.InitVelibApi(params.ApiToken)
+	exporter := InitDbExporter(velibApi, sql, 200, time.Duration(1000/params.requestMaxFreq),
+		time.Second*10)
 	for {
 		if !params.noRunSync {
-
 			log.Infof("Running DB export")
 			err := exporter.RunExport()
 			if err != nil {
 				log.Errorf("Fail to run DB export: %s", err.Error())
+				metric.reportFailure()
 			} else {
 				log.Infof("DB export ran successfully")
 			}
