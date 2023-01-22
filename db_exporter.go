@@ -40,8 +40,6 @@ func InitDbExporter(api *api.VelibApiClient, sql database.IDatabase, workerNb in
 }
 
 func (exp *DbExporter) RunExport() error {
-	var wg sync.WaitGroup
-	exp.wg = wg
 	exp.insertVelibDockedCount = 0
 	exp.minorErrorCount = 0
 	exp.insertVelibCount = 0
