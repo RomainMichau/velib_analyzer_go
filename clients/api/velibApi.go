@@ -113,7 +113,7 @@ func (api *VelibApiClient) QueueGetVelibRequest(stationName string) error {
 	options := cycletls.Options{
 		Body:    string(bodyJson),
 		Headers: headers,
-		Timeout: 1000,
+		Timeout: 100,
 	}
 	api.channel.Queue(baseUrl+stationDetailsEndpoint, options, "POST")
 	return nil

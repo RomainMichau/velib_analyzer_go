@@ -40,8 +40,6 @@ func InitDbExporter(api *api.VelibApiClient, sql database.IDatabase, workerNb in
 }
 
 func (exp *DbExporter) RunExport() error {
-	var wg sync.WaitGroup
-	exp.wg = wg
 	exp.insertVelibDockedCount = 0
 	exp.minorErrorCount = 0
 	exp.insertVelibCount = 0
@@ -79,7 +77,6 @@ func (exp *DbExporter) RunExport() error {
 	}
 	log.Debugf("All station request queued")
 	elapsed := time.Since(start)
-	exp.wg.Add(1)
 	timeout := waitWgWithTimeout(&exp.wg, exp.syncTimeout)
 	if timeout {
 		error := fmt.Sprintf("WG Sync TimedOut!!!!. Waited %s", exp.syncTimeout.String())
@@ -111,21 +108,21 @@ func (exp *DbExporter) worker() {
 			log.Errorf("Failed to read station detail. %s", err.Error())
 			exp.minorErrorCount++
 			exp.wg.Done()
-			return
+			continue
 		}
 		stationCode, err := strconv.Atoi(stationDetail.Station.Code)
 		if err != nil {
 			log.Errorf("Failed to convert station code (%s) to int %s", stationDetail.Station.Code, err.Error())
 			exp.wg.Done()
 			exp.minorErrorCount++
-			return
+			continue
 		}
 		stationSql, err := exp.database.GetStationByCode(stationCode)
 		if err != nil {
 			log.Errorf("Failed to convert station code (%s) to int %s", stationDetail.Station.Code, err.Error())
 			exp.wg.Done()
 			exp.minorErrorCount++
-			return
+			continue
 		}
 		if stationSql == nil {
 			log.Debugf("Inserting station %s", stationDetail.Station.Name)
@@ -135,7 +132,7 @@ func (exp *DbExporter) worker() {
 				log.Errorf("Failed to insert station %s. %s", stationDetail.Station.Name, err.Error())
 				exp.wg.Done()
 				exp.minorErrorCount++
-				return
+				continue
 			}
 			exp.insertStationCount++
 		}
@@ -146,7 +143,7 @@ func (exp *DbExporter) worker() {
 				log.Errorf("Failed to get velib by code in SQL. (Code: %d): %s", velibCode, err.Error())
 				exp.wg.Done()
 				exp.minorErrorCount++
-				return
+				continue
 			}
 			if sqlBike == nil {
 				err := exp.database.InsertVelib(velibCode, exp.runId, bike.BikeElectric == "yes")
@@ -154,7 +151,7 @@ func (exp *DbExporter) worker() {
 					log.Errorf("Failed to insert velib %d in SQL: %s", velibCode, err.Error())
 					exp.wg.Done()
 					exp.minorErrorCount++
-					return
+					continue
 				}
 				exp.insertVelibCount++
 				log.Debugf("Inserting velib %d", velibCode)
@@ -167,7 +164,7 @@ func (exp *DbExporter) worker() {
 					log.Errorf("Failed to insert velib docked %d in SQL: %s", velibCode, err.Error())
 					exp.wg.Done()
 					exp.minorErrorCount++
-					return
+					continue
 				}
 				exp.insertVelibDockedCount++
 			}

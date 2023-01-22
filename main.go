@@ -80,7 +80,7 @@ func main() {
 	go controller.Run(params.apiPort)
 	velibApi := api.InitVelibApi(params.ApiToken)
 	exporter := InitDbExporter(velibApi, sql, 200, time.Duration(1000/params.requestMaxFreq),
-		time.Second*10)
+		time.Second*400)
 	for {
 		if !params.noRunSync {
 			log.Infof("Running DB export")
