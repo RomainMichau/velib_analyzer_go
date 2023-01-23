@@ -10,13 +10,24 @@ services:
       OPENVPN_PASSWORD: ${NORDVPN_PASSWORD}
       OPENVPN_USER: ${NORDVPN_USERNAME}
       SERVER_REGIONS: ${Netherlands-Belgium}
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+    ports:
+      - "80:80"
+    command: certonly --standalone --keep-until-expiring  -d rokim1.trilyzer.com
   velib:
     image: velib_analyzer_go
     network_mode: "service:gluetun"
     build: ..
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
     depends_on:
       gluetun:
-        condition: service_healthy
+          condition: service_healthy
+      certbot:
+        condition: service_started
     restart: always
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:${API_PORT}/api/healthcheck || exit 1" ]

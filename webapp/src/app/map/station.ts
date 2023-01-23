@@ -4,4 +4,5 @@ export interface Station {
   Latitude: number;
   Code: number;
   Dist: number;
+  Arrival: Map<number, Map<number, number>>
 }

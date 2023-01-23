@@ -1,5 +1,4 @@
 FROM node:14.20-alpine AS FRONT
-
 WORKDIR /usr/src/app
 RUN mkdir -p /usr/src/app/webapp
 WORKDIR /usr/src/app/webapp
@@ -9,7 +8,6 @@ RUN npm install
 RUN npm run build
 
 FROM golang:1.19 AS BACK
-VOLUME /etc/letsencrypt /etc/letsencrypt
 WORKDIR /usr/src/app
 RUN mkdir -p /usr/src/app/webapp
 COPY --from=FRONT /usr/src/app/webapp/ /usr/src/app/webapp

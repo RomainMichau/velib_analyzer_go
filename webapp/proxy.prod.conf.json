@@ -1,0 +1,6 @@
+{
+  "/api": {
+    "target": "https://rokim1.trilyzer.com",
+    "secure": false
+  }
+}
