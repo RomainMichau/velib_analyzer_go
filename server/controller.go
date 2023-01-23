@@ -42,6 +42,12 @@ func InitController(sql *database.VelibSqlClient, metrics *Metrics) *Controller 
 	return &controller
 }
 
+func (c *Controller) RunWithTls(port int, certPath string, keyPath string) {
+	loggedRouter := handlers.LoggingHandler(os.Stdout, c.router)
+	log.Infof("Starting controller on port %d", port)
+	log.Fatal(http.ListenAndServeTLS(fmt.Sprintf("0.0.0.0:%d", port), certPath, keyPath, loggedRouter))
+}
+
 func (c *Controller) Run(port int) {
 	loggedRouter := handlers.LoggingHandler(os.Stdout, c.router)
 	log.Infof("Starting controller on port %d", port)

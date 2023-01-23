@@ -42,3 +42,8 @@ services:
       - '81'
       - --db_port
       - ${DB_PORT:-5432}
+      - --use_tls
+      - --cert_path
+      - ${CERT_PATH}
+      - --key_path
+      - ${KEY_PATH}

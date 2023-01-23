@@ -24,6 +24,9 @@ type Params struct {
 	requestMaxFreq int
 	noRunSync      bool
 	apiPort        int
+	useTls         bool
+	certPath       string
+	keyPath        string
 }
 
 func (p *Params) print() {
@@ -77,7 +80,11 @@ func main() {
 	}
 	metric := Metrics{failureCount: 0}
 	controller := InitController(sql, &metric)
-	go controller.Run(params.apiPort)
+	if params.useTls {
+		go controller.RunWithTls(params.apiPort, params.certPath, params.keyPath)
+	} else {
+		go controller.Run(params.apiPort)
+	}
 	velibApi := api.InitVelibApi(params.ApiToken)
 	exporter := InitDbExporter(velibApi, sql, 200, time.Duration(1000/params.requestMaxFreq),
 		time.Second*400)
@@ -107,6 +114,10 @@ func parseParams() (*Params, error) {
 	verbose := flag.Bool("verbose", false, "verbose")
 	apiPort := flag.Int("api_port", 80, "verbose")
 	noRunSync := flag.Bool("no_run_sync", false, "run sync")
+	useTls := flag.Bool("use_tls", false, "Will use tls")
+	certPath := flag.String("cert_path", "", "Path of the cert for TLS")
+	keyPath := flag.String("key_path", "", "Path of the key for TLS")
+
 	requestMaxFreqMs := flag.Int("request_max_freq", 10, "Max request to API per second"+
 		"velib API ")
 	displayPubIp := flag.Bool("show_ip", false, "Log level")
@@ -136,6 +147,9 @@ func parseParams() (*Params, error) {
 	if *requestMaxFreqMs > 50 {
 		return nil, fmt.Errorf("request_max_freq cannot be > 50")
 	}
+	if *useTls && (*certPath == "" || *keyPath == "") {
+		return nil, fmt.Errorf("cert_path and key_path need to be set to use TLS")
+	}
 	return &Params{
 		DbHostname:     *dbHostname,
 		ApiToken:       *velibApiToken,
@@ -143,11 +157,14 @@ func parseParams() (*Params, error) {
 		DbUsername:     *dbUserName,
 		DbPort:         *dbPort,
 		DbName:         *dbName,
-		Verbose:        *verbose,
 		IntervalSec:    *intervalSeconds,
 		displayPubIp:   *displayPubIp,
+		Verbose:        *verbose,
 		requestMaxFreq: *requestMaxFreqMs,
 		noRunSync:      *noRunSync,
 		apiPort:        *apiPort,
+		useTls:         *useTls,
+		certPath:       *certPath,
+		keyPath:        *keyPath,
 	}, nil
 }
