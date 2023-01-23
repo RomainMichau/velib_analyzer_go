@@ -17,6 +17,7 @@ services:
     depends_on:
       gluetun:
         condition: service_healthy
+    restart: always
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:${API_PORT}/api/healthcheck || exit 1" ]
       timeout: 10s
