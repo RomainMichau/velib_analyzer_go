@@ -1,1 +1,6 @@
+<div class="google-maps-input-container">
+  <input type="number" [(ngModel)]="dist" (change)="updateMap()" id="dist" name="dist" [value]="1000" class="google-maps-input">
+  <label for="dist" class="google-maps-label">Distance meter</label>
+</div>
+
 <div id="map" class="map-container"></div>

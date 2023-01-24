@@ -5,29 +5,27 @@
   display: flex;
 }
 
-/* Change the color of the map tiles to match the color scheme of Google Maps */
-.leaflet-tile {
+.google-maps-input-container {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+
+.google-maps-input {
+  padding: 8px 12px;
+  border: none;
+  font-size: 14px;
+  width: 20%;
+}
+
+.google-maps-label {
+  color: #757575;
+  font-size: 14px;
+  padding: 8px 12px;
   background-color: #f5f5f5;
-}
-
-/* Change the color of the map's controls to match the color scheme of Google Maps */
-.leaflet-control-container {
-  background-color: #fff;
-  color: #333;
-}
-
-/* Change the color of the map's markers to match the color scheme of Google Maps */
-.leaflet-marker-icon {
-  background-color: #4285F4;
-  border: 2px solid #fff;
-}
-
-/* Change the font of the map's controls to match the font of Google Maps */
-.leaflet-control-container {
-  font-family: 'Roboto', sans-serif;
-}
-
-/* Add a drop shadow to the markers to match the style of Google Maps markers */
-.leaflet-marker-icon {
-  box-shadow: 0px 2px 4px -1px rgba(0,0,0,0.3);
+  border-right: 1px solid #e0e0e0;
 }

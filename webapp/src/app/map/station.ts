@@ -4,5 +4,6 @@ export interface Station {
   Latitude: number;
   Code: number;
   Dist: number;
+  // UTC + 0
   Arrival: { [dow: number]: { [hour: number]: number } };
 }
