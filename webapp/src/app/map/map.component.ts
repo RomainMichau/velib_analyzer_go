@@ -24,9 +24,20 @@ export class MapComponent implements OnInit {
   constructor(private mapService: MapService) {
   }
 
+
+  getDow(): number {
+    const d = new Date();
+    let day = d.getUTCDay()
+    if (day == 0) {
+      return 7
+    }
+    return day
+  }
+
   ngOnInit() {
     this.map = L.map('map').setView([0, 0], 13);
     navigator.geolocation.getCurrentPosition((position) => {
+      let dow = this.getDow()
       let lat = position.coords.latitude
       let long = position.coords.longitude
       this.map.setView([lat, long], 13);
@@ -34,13 +45,22 @@ export class MapComponent implements OnInit {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(this.map);
-    this.mapService.getCoordinates(lat, long).subscribe(coordinates => {
+    this.mapService.getCoordinates(lat, long, dow).subscribe(coordinates => {
       coordinates.forEach(station => {
         let coordinates: [number, number] = [station.Latitude, station.Longitude]
         const marker = L.marker(coordinates).addTo(this.map);
-        marker.bindPopup(station.Name).openPopup();
+        marker.bindPopup(this.toStringA(station.Arrival, dow)).openPopup();
         this.markers.push(marker);
       });
     })
   })};
+
+  toStringA(arrivals: { [dow: number]: { [hour: number]: number } }, dow: number): string {
+    let res = ""
+    // @ts-ignore
+    for (var a in arrivals[dow]) {
+      res += `${a}h: ${arrivals[dow][a]} bike/h</br>`
+    }
+    return res
+  }
 }

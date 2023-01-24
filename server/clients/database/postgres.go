@@ -52,6 +52,10 @@ var (
 	GetStationWithMaxDist = `SELECT station_name, long, lat, station_code, ST_DistanceSphere(ST_MakePoint(lat, long),
     	ST_MakePoint($1, $2)) AS distance
 		FROM public.stations where ST_DWithin(ST_MakePoint(lat, long)::geography, ST_MakePoint($1, $2)::geography, $3);`
+	GetStationWithMaxDistAndArrivalPerStation = `SELECT station_name, long, lat, s.station_code, ST_DistanceSphere(ST_MakePoint(lat, long),
+    	ST_MakePoint($1, $2)), h.hour_utc, h.dow_utc  AS distance, h.avg
+		FROM public.stations as s join public.avg_velib_per_station_dow_hr as h on h.station_code = s.station_code 
+		where ST_DWithin(ST_MakePoint(s.lat, s.long)::geography, ST_MakePoint($1, $2)::geography, $3) and h.dow_utc =$4`
 )
 
 func InitDatabase(dbPassword, dbHostname, dbUsername, dbName string, dbPort int) (*VelibSqlClient, error) {
@@ -168,6 +172,49 @@ func (sql *VelibSqlClient) GetAllStationsCode() (map[int]bool, error) {
 			return nil, err
 		}
 		res[stationCode] = true
+	}
+	return res, nil
+}
+
+func (sql *VelibSqlClient) GetVelibByMaxDistAndArrival(distMeter int, long, lat float64, dow int) ([]*clients.StationWithArrivals, error) {
+	rows, err := sql.connPool.Query(context.Background(), GetStationWithMaxDistAndArrivalPerStation, lat, long, distMeter, dow)
+	if err != nil {
+		return nil, fmt.Errorf("[GetVelibByMaxDist] cannot get stations per dist: %w", err)
+	}
+	var res []*clients.StationWithArrivals
+	tmpRes := make(map[int]*clients.StationWithArrivals)
+	for rows.Next() {
+		var name string
+		var longitude float32
+		var latitude float32
+		var code, dayOfWeek, hour int
+		var dist, avg float32
+		err := rows.Scan(&name, &longitude, &latitude, &code, &dist, &hour, &dayOfWeek, &avg)
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		_, pres := tmpRes[code]
+		if pres {
+			arrivals := tmpRes[code]
+			arrivals.AddArrival(dow, hour, avg)
+		} else {
+			newEntry := clients.StationWithArrivals{
+				Name:      name,
+				Longitude: longitude,
+				Latitude:  latitude,
+				Code:      code,
+				Dist:      dist,
+			}
+			newEntry.AddArrival(dow, hour, avg)
+			tmpRes[code] = &newEntry
+		}
+	}
+
+	for _, value := range tmpRes {
+		res = append(res, value)
 	}
 	return res, nil
 }

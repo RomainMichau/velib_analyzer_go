@@ -12,8 +12,6 @@ import (
 	"strconv"
 )
 
-//48.834882358514875, 2.3045250711792886
-
 type Controller struct {
 	sql     *database.VelibSqlClient
 	router  *mux.Router
@@ -35,7 +33,7 @@ func InitController(sql *database.VelibSqlClient, metrics *Metrics) *Controller 
 	r.HandleFunc("/api/healthcheck", controller.healthCheck).
 		Methods("GET")
 	r.HandleFunc("/api/by_dist", controller.getVelibByDist).
-		Queries("long", "{long}", "lat", "{lat}", "dist", "{dist}").
+		Queries("long", "{long}", "lat", "{lat}", "dist", "{dist}", "dow", "{dow}").
 		Methods("GET")
 	r.PathPrefix("/").Handler(spa)
 
@@ -55,13 +53,14 @@ func (c *Controller) Run(port int) {
 }
 
 func (c *Controller) getVelibByDist(w http.ResponseWriter, r *http.Request) {
-	log.Infof("Call received mate1")
 	vars := mux.Vars(r)
 	longSt, presentlo := vars["long"]
 	long, err := strconv.ParseFloat(longSt, 32)
 	latSt, presentla := vars["lat"]
 	lat, err := strconv.ParseFloat(latSt, 32)
 	distSt, presentDist := vars["dist"]
+	dowSt, presentdow := vars["dow"]
+	dow, err := strconv.Atoi(dowSt)
 	dist := 500
 	if presentDist {
 		dist, err = strconv.Atoi(distSt)
@@ -70,11 +69,11 @@ func (c *Controller) getVelibByDist(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if !presentlo || !presentla || err != nil {
+	if !presentlo || !presentla || !presentdow || err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	res, err := c.sql.GetVelibByMaxDist(dist, long, lat)
+	res, err := c.sql.GetVelibByMaxDistAndArrival(dist, long, lat, dow)
 	if err != nil {
 		log.Errorf("[getVelibByDist] Error when querying sql: %s", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -90,7 +89,6 @@ func (c *Controller) getVelibByDist(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) getVelibArrival(w http.ResponseWriter, r *http.Request) {
-	log.Infof("Call received mate1")
 	vars := mux.Vars(r)
 	code, present := vars["code"]
 	if !present {
