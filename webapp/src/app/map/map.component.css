@@ -4,3 +4,30 @@
   margin: auto;
   display: flex;
 }
+
+/* Change the color of the map tiles to match the color scheme of Google Maps */
+.leaflet-tile {
+  background-color: #f5f5f5;
+}
+
+/* Change the color of the map's controls to match the color scheme of Google Maps */
+.leaflet-control-container {
+  background-color: #fff;
+  color: #333;
+}
+
+/* Change the color of the map's markers to match the color scheme of Google Maps */
+.leaflet-marker-icon {
+  background-color: #4285F4;
+  border: 2px solid #fff;
+}
+
+/* Change the font of the map's controls to match the font of Google Maps */
+.leaflet-control-container {
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Add a drop shadow to the markers to match the style of Google Maps markers */
+.leaflet-marker-icon {
+  box-shadow: 0px 2px 4px -1px rgba(0,0,0,0.3);
+}

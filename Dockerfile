@@ -1,4 +1,4 @@
-FROM node:14.20-alpine AS FRONT
+FROM node:14.20-slim AS FRONT
 WORKDIR /usr/src/app
 RUN mkdir -p /usr/src/app/webapp
 WORKDIR /usr/src/app/webapp

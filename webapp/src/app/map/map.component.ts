@@ -1,6 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {MapService} from './map.service';
 import * as L from 'leaflet';
+import {Station} from "./station";
 
 @Component({
   selector: 'app-map',
@@ -49,17 +50,27 @@ export class MapComponent implements OnInit {
       coordinates.forEach(station => {
         let coordinates: [number, number] = [station.Latitude, station.Longitude]
         const marker = L.marker(coordinates).addTo(this.map);
-        marker.bindPopup(this.toStringA(station.Arrival, dow)).openPopup();
+        marker.bindPopup(this.toStringA(station, dow)).openPopup();
         this.markers.push(marker);
       });
     })
   })};
 
-  toStringA(arrivals: { [dow: number]: { [hour: number]: number } }, dow: number): string {
-    let res = ""
-    // @ts-ignore
-    for (var a in arrivals[dow]) {
-      res += `${a}h: ${arrivals[dow][a]} bike/h</br>`
+  toStringA(station: Station, dow: number): string {
+    const arrivals = station.Arrival
+    let d = new Date();
+    let currentHour = d.getUTCHours();
+    let startHour = currentHour - 2;
+    let endHour = currentHour + 2;
+    let res = `<a href="https://www.google.com/maps/search/?api=1&query=${station.Latitude},${station.Longitude}">Google Maps</a> </br>`
+    for (var hour in arrivals[dow]) {
+      let hourNumber = Number(hour);
+      if (hourNumber ==  currentHour) {
+        res += `<b>${hour}h: ${arrivals[dow][hour]} bike/h</b></br>`
+      }
+      if (hourNumber > startHour && hourNumber < endHour) {
+        res += `${hour}h: ${arrivals[dow][hour]} bike/h</br>`
+      }
     }
     return res
   }
