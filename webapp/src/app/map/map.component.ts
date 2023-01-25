@@ -80,8 +80,16 @@ export class MapComponent implements OnInit {
     return res
   }
 
+  resetLocation() {
+    navigator.geolocation.getCurrentPosition((position) => {
+      this.lat = position.coords.latitude;
+      this.long = position.coords.longitude;
+      this.updateMap();
+    });
+  }
+
   updateMap() {
-    this.router.navigate([], {queryParams: {dist: this.dist}, relativeTo: this.route});
+    this.router.navigate([], {queryParams: {dist: this.dist, lat: this.lat, long: this.long }, relativeTo: this.route});
     if (this.currentPostMarker != undefined) {
       this.map.removeLayer(this.currentPostMarker);
     }
