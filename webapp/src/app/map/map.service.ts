@@ -28,13 +28,17 @@ export class MapService {
   }
 
 
-  getCoordinates(lat: number, long: number, day: number, dist: number): Observable<Array<Station>> {
+  getStationCoordinates(lat: number, long: number, day: number, dist: number): Observable<Array<Station>> {
     let params = new HttpParams().appendAll({"long": long, "lat": lat, dist: dist, dow: day})
     // return of([[48.834882358514875, 2.3045250711792886]]);
     let offset = Math.trunc(new Date().getTimezoneOffset() / -60);
     return this.http.get<Array<Station>>(this.coordinatesUrl, {params: params}).pipe(
       map(stations => {
-        return stations.map(station => this.convertArrivalTimezoneAndRound(station, offset));
+        if(stations != null) {
+          return stations.map(station => this.convertArrivalTimezoneAndRound(station, offset));
+        } else {
+          return []
+        }
       }))
   }
 }

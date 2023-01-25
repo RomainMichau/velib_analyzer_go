@@ -16,7 +16,7 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt
     ports:
       - "80:80"
-    command: certonly --standalone --keep-until-expiring  -d rokim1.trilyzer.com
+    command: certonly --standalone --keep-until-expiring  -d ${APP_DOMAIN}
   velib:
     image: velib_analyzer_go
     network_mode: "service:gluetun"
