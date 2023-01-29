@@ -10,12 +10,6 @@ services:
       OPENVPN_PASSWORD: ${NORDVPN_PASSWORD}
       OPENVPN_USER: ${NORDVPN_USERNAME}
       SERVER_REGIONS: ${Netherlands-Belgium}
-  certbot:
-    image: certbot/certbot
-    volumes:
-      - /etc/letsencrypt:/etc/letsencrypt
-    ports:
-      - "80:80"
     command: certonly --standalone --keep-until-expiring  -d ${APP_DOMAIN}
   velib:
     image: velib_analyzer_go
