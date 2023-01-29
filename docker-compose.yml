@@ -10,7 +10,6 @@ services:
       OPENVPN_PASSWORD: ${NORDVPN_PASSWORD}
       OPENVPN_USER: ${NORDVPN_USERNAME}
       SERVER_REGIONS: ${Netherlands-Belgium}
-    command: certonly --standalone --keep-until-expiring  -d ${APP_DOMAIN}
   velib:
     image: velib_analyzer_go
     network_mode: "service:gluetun"
@@ -20,8 +19,6 @@ services:
     depends_on:
       gluetun:
           condition: service_healthy
-      certbot:
-        condition: service_started
     restart: always
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:${API_PORT}/api/healthcheck || exit 1" ]
