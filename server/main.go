@@ -1,3 +1,6 @@
+//	@title		Velib analyzer
+//	@version	1.0
+
 package main
 
 import (
@@ -5,6 +8,8 @@ import (
 	"fmt"
 	"github.com/RomainMichau/velib_analyzer_go/clients/api"
 	"github.com/RomainMichau/velib_analyzer_go/clients/database"
+	controller2 "github.com/RomainMichau/velib_analyzer_go/controller"
+	"github.com/RomainMichau/velib_analyzer_go/metrics"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -78,8 +83,8 @@ func main() {
 	if err != nil {
 		return
 	}
-	metric := Metrics{failureCount: 0}
-	controller := InitController(sql, &metric)
+	metric := metrics.Metrics{FailureCount: 0}
+	controller := controller2.InitController(sql, &metric)
 	if params.useTls {
 		go controller.RunWithTls(params.apiPort, params.certPath, params.keyPath)
 	} else {
@@ -94,7 +99,7 @@ func main() {
 			err := exporter.RunExport()
 			if err != nil {
 				log.Errorf("Fail to run DB export: %s", err.Error())
-				metric.reportFailure()
+				metric.ReportFailure()
 			} else {
 				log.Infof("DB export ran successfully")
 			}

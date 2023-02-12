@@ -1,0 +1,152 @@
+definitions:
+  clients.StationSqlEntity:
+    properties:
+      code:
+        type: integer
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+    type: object
+  clients.StationWithArrivals:
+    properties:
+      arrival:
+        additionalProperties:
+          additionalProperties:
+            type: number
+          type: object
+        description: dow -> hour -> arrival
+        type: object
+      code:
+        type: integer
+      dist:
+        type: number
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+    type: object
+  clients.VelibArrival:
+    properties:
+      avg:
+        type: number
+      dow:
+        type: integer
+      hour:
+        type: integer
+    type: object
+  clients.VelibDockedSqlDetails:
+    properties:
+      available:
+        type: boolean
+      station:
+        $ref: '#/definitions/clients.StationSqlEntity'
+      timeStamp:
+        type: string
+      velibCode:
+        type: integer
+    type: object
+info:
+  contact: {}
+  title: Velib analyzer
+  version: "1.0"
+paths:
+  /api/by_dist:
+    get:
+      consumes:
+      - application/json
+      description: Return all stations in a certain distance from GPS coordinates*
+      parameters:
+      - default: 2.3391411244733233
+        description: Longitude
+        in: query
+        name: long
+        required: true
+        type: number
+      - default: 48.84641747361601
+        description: Latitude
+        in: query
+        name: lat
+        required: true
+        type: number
+      - default: 1000
+        description: Max distance
+        in: query
+        name: dist
+        required: true
+        type: integer
+      - default: 1
+        description: 'Day of week (mon:1, sun: 7)'
+        in: query
+        name: dow
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of velib arrivals for requested station
+          schema:
+            items:
+              $ref: '#/definitions/clients.StationWithArrivals'
+            type: array
+        "400":
+          description: Invalid params
+      summary: Return all stations in a certain distance from GPS coordinates
+      tags:
+      - Velibs
+  /api/get_arrival/{code}:
+    get:
+      consumes:
+      - application/json
+      description: Return avg velib arrivals per dow and how for a requested station
+      parameters:
+      - default: 15122
+        description: Station code
+        in: path
+        name: code
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of velib arrivals for requested station
+          schema:
+            items:
+              $ref: '#/definitions/clients.VelibArrival'
+            type: array
+        "400":
+          description: Invalid params
+      summary: Return avg velib arrivals
+      tags:
+      - Velibs
+  /api/last_station/{code}:
+    get:
+      consumes:
+      - application/json
+      description: Return dock history for velib
+      parameters:
+      - default: 60549
+        description: velib code
+        in: path
+        name: code
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of velib arrivals for requested station
+          schema:
+            items:
+              $ref: '#/definitions/clients.VelibDockedSqlDetails'
+            type: array
+      summary: Return dock history for velib
+      tags:
+      - Velibs
+swagger: "2.0"
